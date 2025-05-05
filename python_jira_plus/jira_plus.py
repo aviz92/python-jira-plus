@@ -6,6 +6,7 @@ import os
 import time
 from enum import Enum
 from typing import Any, Union, Optional
+import requests
 from jira import JIRA, JIRAError, Issue
 from jira.client import ResultList
 from retrying import retry
@@ -312,3 +313,84 @@ class JiraPlus:
         except Exception as err:
             self.logger.exception(f"Unexpected error: {err}")
             return False
+
+    def _get_available_link_types(self) -> set[str]:
+        try:
+            return {link_type.name for link_type in self.jira_client.issue_link_types()}
+        except Exception as err:
+            self.logger.exception(f"Failed to retrieve link types from JIRA. \n{err}")
+            return set()
+
+    def create_link(self, issue_key: str, link_type: str, in_issue_key: str) -> bool:
+        available_link_types = self._get_available_link_types()
+        if link_type not in available_link_types:
+            raise ValueError(f"Invalid link type '{link_type}'. Available link types: {available_link_types}")
+
+        try:
+            self.jira_client.create_issue_link(
+                type=link_type,
+                inwardIssue=issue_key,
+                outwardIssue=in_issue_key,
+            )
+            self.logger.info(f"Link between {issue_key} and {in_issue_key} was created")
+            return True
+        except JIRAError as err:
+            self.logger.exception(f"JIRAError - Link between {issue_key} and {in_issue_key} was not created\n{err}")
+            return False
+        except Exception as err:
+            self.logger.exception(f"Exception - Link between {issue_key} and {in_issue_key} was not created\n{err}")
+            return False
+
+    def transition_issue(
+        self,
+        issue_key: str,
+        transition_name: str,
+        fields: Optional[dict] = None,
+        comment: Optional[str] = None,
+    ) -> bool:
+        try:
+            transitions = self.jira_client.transitions(issue_key)
+            transition_names = {t['name'] for t in transitions}
+            if transition_name not in transition_names:
+                self.logger.error(
+                    f"Transition '{transition_name}' not found for issue {issue_key}. "
+                    f"\nAvailable transitions: {transition_names}"
+                )
+                return False
+
+            transition_id = next(
+                (t['id'] for t in transitions if t['name'].lower() == transition_name.lower()),
+                None
+            )
+            if not transition_id:
+                self.logger.error(f"Transition '{transition_name}' not found for issue {issue_key}")
+                return False
+
+            self.jira_client.transition_issue(
+                issue=issue_key,
+                transition=transition_id,
+                fields=fields or {},
+                comment=comment or None
+            )
+            self.logger.info(f"Issue {issue_key} transitioned to '{transition_name}'")
+            return True
+        except JIRAError as err:
+            self.logger.exception(f"JIRAError during transition of {issue_key}: {err}")
+            return False
+        except Exception as err:
+            self.logger.exception(f"Unexpected error during transition of {issue_key}: {err}")
+            return False
+
+    def get_account_data(self, user_mail: str) -> list[dict]:
+        jira_rst_url = \
+            f'https://{self.jira_username}:{self.jira_token}@{self.base_url}/rest/api/{3}/user/search?query={user_mail}'
+        response = requests.get(jira_rst_url)
+        return response.json()
+
+    def get_account_id(self, user_mail: str) -> str:
+        data = self.get_account_data(user_mail=user_mail)
+        return data[0]['accountId']
+
+    def get_account_display_name(self, user_display_name: str) -> str:
+        data = self.get_account_data(user_mail=user_display_name)
+        return data[0]['displayName']
