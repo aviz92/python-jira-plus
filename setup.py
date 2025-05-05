@@ -5,13 +5,13 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="python-jira-plus",
-    version="0.1.1",
+    version="0.1.2",
     author='Avi Zaguri',
     author_email="",
     description="Enhanced Python client for JIRA with better error handling, pagination, and metadata validation",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/python-jira-plus",
+    url="https://github.com/aviz92/python-jira-plus",
     project_urls={
         'Repository': 'https://github.com/aviz92/python-jira-plus',
     },
