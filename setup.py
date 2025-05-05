@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="python-jira-plus",
-    version="0.1.0",
+    version="0.1.1",
     author='Avi Zaguri',
     author_email="",
     description="Enhanced Python client for JIRA with better error handling, pagination, and metadata validation",
@@ -27,7 +27,7 @@ setup(
     install_requires=[
         "jira>=3.1.1",
         "retrying>=1.3.3",
-        "python-jira-plus>=0.1.4",
+        "custom-python-logger>=0.1.4",
     ],
     keywords="jira, atlassian, api, client",
 )
