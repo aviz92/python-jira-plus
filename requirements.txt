@@ -3,5 +3,6 @@ wheel
 dotenv
 custom-python-logger
 pytest
+requests
+retrying
 jira~=3.8.0
-retrying~=1.3.4
