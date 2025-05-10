@@ -35,21 +35,3 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           password: ${{ secrets.PYPI_API_TOKEN }}
-
-      - name: Publish to GitHub Packages
-        run: |
-          # Create PyPI configuration file
-          cat > ~/.pypirc << EOF
-          [distutils]
-          index-servers =
-              github
-
-          [github]
-          repository = https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}
-          url = https://upload.pypi.org/legacy/
-          username = ${{ github.repository_owner }}
-          password = ${{ secrets.GITHUB_TOKEN }}
-          EOF
-          
-          # Upload using twine
-          python -m twine upload --repository github dist/*
