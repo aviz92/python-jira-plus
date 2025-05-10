@@ -1,3 +1,12 @@
+[project]
+name = "python-jira-plus"
+version = "0.1.9"
+# other configurations...
+
+[project.urls]
+"Homepage" = "https://github.com/aviz92/python-jira-plus"
+"Bug Tracker" = "https://github.com/aviz92/python-jira-plus/issues"
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
