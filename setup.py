@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="python-jira-plus",
-    version="0.1.9",
+    version="0.2.0",
     author='Avi Zaguri',
     author_email="",
     description="Enhanced Python client for JIRA with better error handling, pagination, and metadata validation",
