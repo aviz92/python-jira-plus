@@ -39,8 +39,7 @@ jobs:
       - name: Publish to GitHub Packages
         run: |
           python -m pip install --upgrade twine
-          ls -l dist  # optional: debug output
-          twine upload --repository-url https://upload.github.com/aviz92/python-jira-plus/*
+          twine upload dist/*
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
