@@ -1,8 +1,4 @@
 # Python JIRA Plus
-
-[![PyPI version](https://badge.fury.io/py/python-jira-plus.svg)](https://badge.fury.io/py/python-jira-plus)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
 An enhanced Python client for JIRA that extends the functionality of the official `jira` package, providing better error handling, pagination, metadata validation, and more.
 
 ---
