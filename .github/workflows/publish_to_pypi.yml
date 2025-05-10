@@ -38,8 +38,18 @@ jobs:
 
       - name: Publish to GitHub Packages
         run: |
-          python -m pip install --upgrade twine
-          twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+          # Create PyPI configuration file
+          cat > ~/.pypirc << EOF
+          [distutils]
+          index-servers =
+              github
+
+          [github]
+          repository = https://github.com/${{ github.repository_owner }}/${{ github.event.repository.name }}
+          url = https://upload.pypi.org/legacy/
+          username = ${{ github.repository_owner }}
+          password = ${{ secrets.GITHUB_TOKEN }}
+          EOF
+          
+          # Upload using twine
+          python -m twine upload --repository github dist/*
