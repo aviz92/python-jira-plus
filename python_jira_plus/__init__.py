@@ -7,8 +7,6 @@ An enhanced Python client for JIRA with better error handling,
 pagination, metadata validation, and more.
 """
 
-__version__ = '0.1.0'
-
 from dotenv import load_dotenv
 load_dotenv()
 
