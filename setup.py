@@ -1,33 +1,36 @@
 from setuptools import setup, find_packages
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+package_version = '1.0.1'
+
+package_name = 'python-jira-plus'
+package_description = 'Enhanced Python client for JIRA with better error handling, pagination, and metadata validation.'
+
+package_long_description_content_type = 'text/markdown'
+package_url = f'https://github.com/aviz92/{package_name}'
+package_python_requires = '>=3.11'
+package_author = 'Avi Zaguri'
+
+with open('requirements.txt', 'r') as file:
+    package_install_requires = [
+        line.strip() for line in file.readlines() if line.strip() and not line.startswith('#')
+    ]
+
+with open('README.md', 'r') as file:
+    package_long_description = file.read()
 
 setup(
-    name="python-jira-plus",
-    version="1.0.0",
-    author='Avi Zaguri',
-    author_email="",
-    description="Enhanced Python client for JIRA with better error handling, pagination, and metadata validation",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/aviz92/python-jira-plus",
+    name=package_name,
+    version=package_version,
+    packages=find_packages(include=[package_name, f'{package_name}.*']),
+    install_requires=package_install_requires,
+    author=package_author,
+    author_email='',
+    description=package_description,
+    long_description=package_long_description,
+    long_description_content_type=package_long_description_content_type,
+    url=package_url,
     project_urls={
-        'Repository': 'https://github.com/aviz92/python-jira-plus',
+        'Repository': package_url,
     },
-    packages=find_packages(),
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        "License :: OSI Approved :: MIT License",
-        "Programming Language :: Python :: 3",
-    ],
-    python_requires=">=3.9",
-    install_requires=[
-        "jira>=3.1.1",
-        "retrying>=1.3.3",
-        "custom-python-logger>=0.1.4",
-    ],
-    keywords="jira, atlassian, api, client",
+    python_requires=package_python_requires,
 )
