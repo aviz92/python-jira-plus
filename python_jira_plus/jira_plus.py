@@ -341,6 +341,14 @@ class JiraPlus:
             self.logger.exception(f"Exception - Link between {issue_key} and {in_issue_key} was not created\n{err}")
             return False
 
+    def upload_attachment(self, issue_key: str, file_path: str) -> None:
+        try:
+            self.jira_client.add_attachment(issue=issue_key, attachment=file_path)
+        except JIRAError as err:
+            self.logger.exception(f"JIRAError - Attachment {file_path} was not uploaded to issue {issue_key}\n{err}")
+        except Exception as err:
+            self.logger.exception(f"Exception - Attachment {file_path} was not uploaded to issue {issue_key}\n{err}")
+
     def transition_issue(
         self,
         issue_key: str,
