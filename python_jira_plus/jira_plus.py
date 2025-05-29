@@ -21,18 +21,18 @@ class ServerType(Enum):
 
 class JiraPlus:
     def __init__(
-        self, base_url: Optional[str] = None,
-        server_type: ServerType = ServerType.CLOUD,
-        urllib3_log_level: int = logging.WARNING
+            self, base_url: Optional[str] = None,
+            server_type: ServerType = ServerType.CLOUD,
+            urllib3_log_level: int = logging.WARNING,
+            jira_username: Optional[str] = None,
+            jira_token: Optional[str] = None
     ) -> None:
         self.logger = logging.getLogger()
         logging.getLogger("urllib3").setLevel(urllib3_log_level)
 
-        self.jira_username = os.getenv('JIRA_USER_NAME')
-        self.jira_token = os.getenv('JIRA_TOKEN')
-
-        if not base_url:
-            self.base_url = os.getenv('JIRA_BASE_URL')
+        self.jira_username = jira_username or os.getenv('JIRA_USER_NAME')
+        self.jira_token = jira_token or os.getenv('JIRA_TOKEN')
+        self.base_url = base_url or os.getenv('JIRA_BASE_URL')
 
         self.server_type = server_type
         self.server = f'https://{self.base_url}'
@@ -40,8 +40,7 @@ class JiraPlus:
         self.jira_client = self.create_connection()
         self.check_client_connection()
 
-    @retry(stop_max_attempt_number=3,
-           wait_fixed=180000)  # Retry 3 times with a 3-min (180000) delay between each attempt
+    @retry(stop_max_attempt_number=3, wait_fixed=180000)  # Retry 3 times with a 3-min (180000) delay between each attempt
     def create_connection(self) -> Optional[JIRA]:
         jira_client = JIRA(
             basic_auth=(self.jira_username, self.jira_token),
@@ -81,10 +80,10 @@ class JiraPlus:
             return False
 
     def get_issue_by_key(
-        self,
-        key: str,
-        specific_fields: str | list[str] = '*all',
-        json_result: bool = True
+            self,
+            key: str,
+            specific_fields: str | list[str] = '*all',
+            json_result: bool = True
     ) -> None | Issue | dict[str, Any]:
         try:
             jira_issue = self.jira_client.issue(id=key, fields=specific_fields)
@@ -99,12 +98,12 @@ class JiraPlus:
             return None
 
     def get_objects_by_query(
-        self,
-        query: str,
-        max_results: int = 5000,
-        specific_fields: Union[str, list[str]] = "*all",
-        jira_err_count: int = 3,
-        json_result: bool = True,
+            self,
+            query: str,
+            max_results: int = 5000,
+            specific_fields: Union[str, list[str]] = "*all",
+            jira_err_count: int = 3,
+            json_result: bool = True,
     ) -> Optional[Union[ResultList[Issue], dict]]:
         return self._paginate_query(
             query=query,
@@ -115,12 +114,12 @@ class JiraPlus:
         )
 
     def _paginate_query(
-        self,
-        query: str,
-        max_results: int,
-        specific_fields: Union[str, list[str]],
-        jira_err_limit: int,
-        json_result: bool
+            self,
+            query: str,
+            max_results: int,
+            specific_fields: Union[str, list[str]],
+            jira_err_limit: int,
+            json_result: bool
     ) -> Union[ResultList[Issue] | list]:
         start_at = 0
         all_issues = []
@@ -172,10 +171,10 @@ class JiraPlus:
         return meta, issue_meta
 
     def get_allowed_values(
-        self,
-        project_key: str,
-        issue_type: str,
-        field_id_or_name: str,
+            self,
+            project_key: str,
+            issue_type: str,
+            field_id_or_name: str,
     ) -> Optional[list]:
         """
         Returns the allowed values for a specific field in a project + issue type context.
@@ -209,10 +208,10 @@ class JiraPlus:
         return describe_allowed_value(value, allowed_values=allowed_values)
 
     def validate_fields(
-        self,
-        project_key: str,
-        issue_type: str,
-        fields: Optional[dict] = None
+            self,
+            project_key: str,
+            issue_type: str,
+            fields: Optional[dict] = None
     ) -> None:
         meta, issue_meta = self._fetch_metadata(project_key=project_key, issue_type=issue_type)
         field_types = meta['projects'][0]['issuetypes'][0]['fields']
@@ -246,13 +245,13 @@ class JiraPlus:
         return issue_meta['fields'].keys()
 
     def create_issue(
-        self,
-        project_key: str,
-        summary: str,
-        description: str,
-        issue_type: str,
-        assignee: Optional[str] = None,
-        custom_fields: Optional[dict] = None,
+            self,
+            project_key: str,
+            summary: str,
+            description: str,
+            issue_type: str,
+            assignee: Optional[str] = None,
+            custom_fields: Optional[dict] = None,
     ) -> Optional[Issue]:
         issue_fields = {
             "project": {"key": project_key},
@@ -261,7 +260,8 @@ class JiraPlus:
             "description": description,
         }
         if assignee:
-            issue_fields["assignee"] = {"accountId": assignee} if self.server_type == ServerType.CLOUD else {"name": assignee}
+            issue_fields["assignee"] = {"accountId": assignee} if self.server_type == ServerType.CLOUD else {
+                "name": assignee}
 
         if custom_fields:
             issue_fields = issue_fields | custom_fields
@@ -279,9 +279,9 @@ class JiraPlus:
             return None
 
     def update_issue(
-        self,
-        issue_key: str,
-        fields_to_update: dict
+            self,
+            issue_key: str,
+            fields_to_update: dict
     ) -> Optional[Issue]:
         try:
             issue = self.jira_client.issue(issue_key)
@@ -350,11 +350,11 @@ class JiraPlus:
             self.logger.exception(f"Exception - Attachment {file_path} was not uploaded to issue {issue_key}\n{err}")
 
     def transition_issue(
-        self,
-        issue_key: str,
-        transition_name: str,
-        fields: Optional[dict] = None,
-        comment: Optional[str] = None,
+            self,
+            issue_key: str,
+            transition_name: str,
+            fields: Optional[dict] = None,
+            comment: Optional[str] = None,
     ) -> bool:
         try:
             transitions = self.jira_client.transitions(issue_key)
