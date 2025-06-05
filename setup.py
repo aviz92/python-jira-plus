@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-package_version = '1.0.4'
+package_version = '1.0.5'
 
 package_name = 'python-jira-plus'
 package_description = 'Enhanced Python client for JIRA with better error handling, pagination, and metadata validation.'

@@ -25,7 +25,9 @@ class JiraPlus:
             server_type: ServerType = ServerType.CLOUD,
             urllib3_log_level: int = logging.WARNING,
             jira_username: Optional[str] = None,
-            jira_token: Optional[str] = None
+            jira_token: Optional[str] = None,  # Use API token (not PAT)
+            verify_ssl: bool = True,
+            sso: bool = False
     ) -> None:
         self.logger = logging.getLogger()
         logging.getLogger("urllib3").setLevel(urllib3_log_level)
@@ -36,17 +38,26 @@ class JiraPlus:
 
         self.server_type = server_type
         self.server = f'https://{self.base_url}'
+        self.verify_ssl = verify_ssl
+        self.sso = sso
 
         self.jira_client = self.create_connection()
         self.check_client_connection()
 
     @retry(stop_max_attempt_number=3, wait_fixed=180000)  # Retry 3 times with a 3-min (180000) delay between each attempt
-    def create_connection(self) -> Optional[JIRA]:
-        jira_client = JIRA(
-            basic_auth=(self.jira_username, self.jira_token),
-            options={'server': self.server},
-            timeout=580
-        )
+    def create_connection(self, timeout=580) -> Optional[JIRA]:
+        if self.server_type == ServerType.ON_PREMISE and not self.sso:
+            jira_client = JIRA(
+                token_auth=self.jira_token,
+                options={'server': self.server},
+                timeout=timeout
+            )
+        else:
+            jira_client = JIRA(
+                basic_auth=(self.jira_username, self.jira_token),
+                options={'server': self.server},
+                timeout=timeout
+            )
 
         if jira_client.projects():
             self.logger.info(f"Jira Connection Successful")
