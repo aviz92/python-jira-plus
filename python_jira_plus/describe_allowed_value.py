@@ -25,7 +25,11 @@ def _(value: str, allowed_values: list = None):
 
 @describe_allowed_value.register
 def _(value: list, allowed_values: list = None):
-    return any(v in allowed_values for v in value)
+    if all(isinstance(v, (str, int, float)) for v in value):
+        return any(v in allowed_values for v in value)
+    if all(isinstance(v, dict) for v in value):
+        return any([list(v.values())[0] in allowed_values for v in value])
+    return False
 
 
 @describe_allowed_value.register

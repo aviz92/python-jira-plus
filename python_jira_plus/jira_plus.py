@@ -51,7 +51,8 @@ class JiraPlus:
         self.jira_client = self.create_connection()
         self.check_client_connection()
 
-    @retry(stop_max_attempt_number=3, wait_fixed=180000)  # Retry 3 times with a 3-min (180000) delay between each attempt
+    @retry(stop_max_attempt_number=3,
+           wait_fixed=180000)  # Retry 3 times with a 3-min (180000) delay between each attempt
     def create_connection(self, timeout=580) -> Optional[JIRA]:
         if self.server_type == ServerType.ON_PREMISE and not self.sso:
             jira_client = JIRA(
@@ -233,9 +234,9 @@ class JiraPlus:
 
     def check_server_createmeta_compatibility(self) -> bool:
         server_version = self.get_server_version()
-        if self.server_type == ServerType.ON_PREMISE and server_version < (8, 0, 0):
+        if self.server_type == ServerType.ON_PREMISE and ''.join(str(x) for x in server_version) > '9.0.0':
             self.logger.warning(
-                f"JIRA server version {server_version} is below the minimum required version (8.0.0). "
+                f"JIRA server version {server_version} is below the minimum required version (9.0.0). "
                 "Some features may not work as expected."
             )
             return False
