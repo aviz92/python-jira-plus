@@ -14,6 +14,11 @@ from retrying import retry
 from python_jira_plus.describe_allowed_value import describe_allowed_value
 
 
+class UrlScheme(Enum):
+    HTTP = 'http'
+    HTTPS = 'https'
+
+
 class ServerType(Enum):
     CLOUD = 'cloud'
     ON_PREMISE = 'on_premise'
@@ -27,7 +32,8 @@ class JiraPlus:
             jira_username: Optional[str] = None,
             jira_token: Optional[str] = None,  # Use API token (not PAT)
             verify_ssl: bool = True,
-            sso: bool = False
+            sso: bool = False,
+            url_scheme: UrlScheme = UrlScheme.HTTPS
     ) -> None:
         self.logger = logging.getLogger()
         logging.getLogger("urllib3").setLevel(urllib3_log_level)
@@ -35,9 +41,10 @@ class JiraPlus:
         self.jira_username = jira_username or os.getenv('JIRA_USER_NAME')
         self.jira_token = jira_token or os.getenv('JIRA_TOKEN')
         self.base_url = base_url or os.getenv('JIRA_BASE_URL')
+        self.url_scheme = url_scheme.value
 
         self.server_type = server_type
-        self.server = f'https://{self.base_url}'
+        self.server = f'{self.url_scheme}://{self.base_url}'
         self.verify_ssl = verify_ssl
         self.sso = sso
 
@@ -49,13 +56,13 @@ class JiraPlus:
         if self.server_type == ServerType.ON_PREMISE and not self.sso:
             jira_client = JIRA(
                 token_auth=self.jira_token,
-                options={'server': self.server},
+                options={'server': self.server, 'verify': self.verify_ssl},
                 timeout=timeout
             )
         else:
             jira_client = JIRA(
                 basic_auth=(self.jira_username, self.jira_token),
-                options={'server': self.server},
+                options={'server': self.server, 'verify': self.verify_ssl},
                 timeout=timeout
             )
 
