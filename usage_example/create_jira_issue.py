@@ -15,7 +15,7 @@ def main():
 
     jira_plus = JiraPlus()
     _ = jira_plus.create_issue(
-        project_key="JIRA TEST",
+        project_key="SCRUM",
         issue_type='Story',
         summary='Test issue',
         description='This is a test issue.',

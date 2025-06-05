@@ -197,13 +197,16 @@ class JiraPlus:
         """
         Returns the allowed values for a specific field in a project + issue type context.
         """
-        _, issue_meta = self._fetch_metadata(project_key=project_key, issue_type=issue_type)
+        fields_metadata = self.get_project_fields_metadata(
+            project_key=project_key,
+            issue_type=issue_type
+        )
 
         # Try to find by ID or fallback to case-insensitive name
-        field = issue_meta['fields'].get(field_id_or_name)
+        field = fields_metadata.get(field_id_or_name)
         if not field:
             # Try matching by name (case-insensitive)
-            for fid, fmeta in issue_meta['fields'].items():
+            for fid, fmeta in fields_metadata.items():
                 if fmeta['name'].lower() == field_id_or_name.lower():
                     field = fmeta
                     break
@@ -225,28 +228,53 @@ class JiraPlus:
         allowed_values = allowed_names | allowed_keys
         return describe_allowed_value(value, allowed_values=allowed_values)
 
+    def get_server_version(self):
+        return tuple(self.jira_client.server_info()['versionNumbers'])
+
+    def check_server_createmeta_compatibility(self) -> bool:
+        server_version = self.get_server_version()
+        if self.server_type == ServerType.ON_PREMISE and server_version < (8, 0, 0):
+            self.logger.warning(
+                f"JIRA server version {server_version} is below the minimum required version (8.0.0). "
+                "Some features may not work as expected."
+            )
+            return False
+        return True
+
+    def get_project_fields_metadata(self, project_key: str, issue_type: str) -> dict:
+        if self.check_server_createmeta_compatibility():
+            meta, issue_meta = self._fetch_metadata(project_key=project_key, issue_type=issue_type)
+            return issue_meta['fields']
+        else:
+            _project_issue_types = self.jira_client.project_issue_types(project_key)
+            _issue_types = {t.name: t for t in _project_issue_types}
+            field_list = self.jira_client.project_issue_fields(project_key, _issue_types[issue_type].id)
+            return {f.fieldId: f.raw for f in field_list}
+
     def validate_fields(
             self,
             project_key: str,
             issue_type: str,
             fields: Optional[dict] = None
     ) -> None:
-        meta, issue_meta = self._fetch_metadata(project_key=project_key, issue_type=issue_type)
-        field_types = meta['projects'][0]['issuetypes'][0]['fields']
+        fields_metadata = self.get_project_fields_metadata(
+            project_key=project_key,
+            issue_type=issue_type
+        )
         for custom_field, value in fields.items():
-            if custom_field not in issue_meta['fields']:
+            if custom_field not in fields_metadata:
                 raise ValueError(
                     f'Invalid field(s) for project "{project_key}", issue type "{issue_type}": "{custom_field}"'
                 )
 
-            if allowed_value := issue_meta['fields'][custom_field].get('allowedValues'):
+            if allowed_value := fields_metadata[custom_field].get('allowedValues'):
                 if not self._is_value_allowed(value=value, allowed_values=allowed_value):
                     raise ValueError(
                         f"Invalid value '{value}' for field '{custom_field}' in project '{project_key}' with issue type '{issue_type}'."
                         f"The allowed values are: {json.dumps(allowed_value, indent=4, sort_keys=True)}"
                     )
 
-            field_type = field_types[custom_field]['schema']['type']
+            field_type = fields_metadata[custom_field]['schema']['type']
             if field_type == 'string' and not isinstance(value, str):
                 raise ValueError(f"Field '{custom_field}' must be a string")
             elif field_type == 'number' and not isinstance(value, (int, float)):
@@ -260,7 +288,6 @@ class JiraPlus:
             elif field_type == 'issuetype' and not isinstance(value, dict):
                 raise ValueError(f"Field '{custom_field}' must be an issue type")
             # Add more field type checks as needed
-        return issue_meta['fields'].keys()
 
     def create_issue(
             self,
