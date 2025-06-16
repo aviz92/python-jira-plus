@@ -313,16 +313,9 @@ class JiraPlus:
             issue_fields = issue_fields | custom_fields
         self.validate_fields(project_key=project_key, issue_type=issue_type, fields=issue_fields)
 
-        try:
-            issue = self.jira_client.create_issue(fields=issue_fields)
-            self.logger.info(f"Issue {issue.key} created successfully.")
-            return issue
-        except JIRAError as err:
-            self.logger.error(f"JIRAError while creating issue: {err.text}")
-            return None
-        except Exception as err:
-            self.logger.exception(f"Unexpected error: {err}")
-            return None
+        issue = self.jira_client.create_issue(fields=issue_fields)
+        self.logger.info(f"Issue {issue.key} created successfully.")
+        return issue
 
     def update_issue(
             self,
