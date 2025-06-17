@@ -353,11 +353,9 @@ class JiraPlus:
             self.logger.exception(f"Unexpected error: {err}")
             return False
 
-    def add_comment(self, issue: str | Issue, comment: str) -> None:
-        if isinstance(issue, str):
-            issue = self.jira_client.issue(issue)
-        issue.add_comment(comment)
-        self.logger.debug(f"Comment added to issue {issue.key} successfully.")
+    def add_comment(self, issue: str, comment: str) -> None:
+        self.jira_client.add_comment(issue, comment)
+        self.logger.debug(f"Comment added to issue {issue} successfully.")
 
     def _get_available_link_types(self) -> set[str]:
         try:
