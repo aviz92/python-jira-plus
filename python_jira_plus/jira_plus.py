@@ -354,7 +354,7 @@ class JiraPlus:
             return False
 
     def add_comment(self, issue: str, comment: str) -> None:
-        self.jira_client.add_comment(issue, comment)
+        self.jira_client.add_comment(issue=issue, body=comment)
         self.logger.debug(f"Comment added to issue {issue} successfully.")
 
     def _get_available_link_types(self) -> set[str]:
