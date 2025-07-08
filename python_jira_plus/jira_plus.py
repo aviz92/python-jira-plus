@@ -51,8 +51,7 @@ class JiraPlus:
         self.jira_client = self.create_connection()
         self.check_client_connection()
 
-    @retry(stop_max_attempt_number=3,
-           wait_fixed=180000)  # Retry 3 times with a 3-min (180000) delay between each attempt
+    @retry(stop_max_attempt_number=3, wait_fixed=180000)
     def create_connection(self, timeout=580) -> Optional[JIRA]:
         if self.server_type == ServerType.ON_PREMISE and not self.sso:
             jira_client = JIRA(
@@ -162,6 +161,9 @@ class JiraPlus:
                     break
                 retries = 0  # reset on success
             except JIRAError as err:
+                if err.status_code == 400:
+                    self.logger.error(f"Bad Request: {err.text}")
+                    raise JIRAError(f"Bad Request: {err.text}")
                 retries += 1
                 self.logger.warning(f"Retry {retries}/{jira_err_limit} after JIRAError: {err}")
                 if retries >= jira_err_limit:
