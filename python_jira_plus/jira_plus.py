@@ -7,6 +7,7 @@ import time
 from enum import Enum
 from typing import Any, Union, Optional
 import requests
+from custom_python_logger import get_logger
 from jira import JIRA, JIRAError, Issue
 from jira.client import ResultList
 from retrying import retry
@@ -26,17 +27,17 @@ class ServerType(Enum):
 
 class JiraPlus:
     def __init__(
-            self, base_url: Optional[str] = None,
-            server_type: ServerType = ServerType.CLOUD,
-            urllib3_log_level: int = logging.WARNING,
-            jira_username: Optional[str] = None,
-            jira_token: Optional[str] = None,  # Use API token (not PAT)
-            verify_ssl: bool = True,
-            sso: bool = False,
-            url_scheme: UrlScheme = UrlScheme.HTTPS
+        self, base_url: Optional[str] = None,
+        server_type: ServerType = ServerType.CLOUD,
+        urllib3_log_level: int = logging.WARNING,
+        jira_username: Optional[str] = None,
+        jira_token: Optional[str] = None,  # Use API token (not PAT)
+        verify_ssl: bool = True,
+        sso: bool = False,
+        url_scheme: UrlScheme = UrlScheme.HTTPS
     ) -> None:
-        self.logger = logging.getLogger()
-        logging.getLogger("urllib3").setLevel(urllib3_log_level)
+        self.logger = get_logger(self.__class__.__name__)
+        get_logger("urllib3").setLevel(urllib3_log_level)
 
         self.jira_username = jira_username or os.getenv('JIRA_USER_NAME')
         self.jira_token = jira_token or os.getenv('JIRA_TOKEN')
@@ -98,10 +99,10 @@ class JiraPlus:
             return False
 
     def get_issue_by_key(
-            self,
-            key: str,
-            specific_fields: str | list[str] = '*all',
-            json_result: bool = True
+        self,
+        key: str,
+        specific_fields: str | list[str] = '*all',
+        json_result: bool = True
     ) -> None | Issue | dict[str, Any]:
         try:
             jira_issue = self.jira_client.issue(id=key, fields=specific_fields)
@@ -116,12 +117,12 @@ class JiraPlus:
             return None
 
     def get_objects_by_query(
-            self,
-            query: str,
-            max_results: int = 5000,
-            specific_fields: Union[str, list[str]] = "*all",
-            jira_err_count: int = 3,
-            json_result: bool = True,
+        self,
+        query: str,
+        max_results: int = 5000,
+        specific_fields: Union[str, list[str]] = "*all",
+        jira_err_count: int = 3,
+        json_result: bool = True,
     ) -> Optional[Union[ResultList[Issue], dict]]:
         return self._paginate_query(
             query=query,
@@ -132,12 +133,12 @@ class JiraPlus:
         )
 
     def _paginate_query(
-            self,
-            query: str,
-            max_results: int,
-            specific_fields: Union[str, list[str]],
-            jira_err_limit: int,
-            json_result: bool
+        self,
+        query: str,
+        max_results: int,
+        specific_fields: Union[str, list[str]],
+        jira_err_limit: int,
+        json_result: bool
     ) -> Union[ResultList[Issue] | list]:
         start_at = 0
         all_issues = []
@@ -192,10 +193,10 @@ class JiraPlus:
         return meta, issue_meta
 
     def get_allowed_values(
-            self,
-            project_key: str,
-            issue_type: str,
-            field_id_or_name: str,
+        self,
+        project_key: str,
+        issue_type: str,
+        field_id_or_name: str,
     ) -> Optional[list]:
         """
         Returns the allowed values for a specific field in a project + issue type context.
@@ -255,10 +256,10 @@ class JiraPlus:
             return {f.fieldId: f.raw for f in field_list}
 
     def validate_fields(
-            self,
-            project_key: str,
-            issue_type: str,
-            fields: Optional[dict] = None
+        self,
+        project_key: str,
+        issue_type: str,
+        fields: Optional[dict] = None
     ) -> None:
         fields_metadata = self.get_project_fields_metadata(
             project_key=project_key,
@@ -293,13 +294,13 @@ class JiraPlus:
             # Add more field type checks as needed
 
     def create_issue(
-            self,
-            project_key: str,
-            summary: str,
-            description: str,
-            issue_type: str,
-            assignee: Optional[str] = None,
-            custom_fields: Optional[dict] = None,
+        self,
+        project_key: str,
+        summary: str,
+        description: str,
+        issue_type: str,
+        assignee: Optional[str] = None,
+        custom_fields: Optional[dict] = None,
     ) -> Optional[Issue]:
         issue_fields = {
             "project": {"key": project_key},
@@ -320,9 +321,9 @@ class JiraPlus:
         return issue
 
     def update_issue(
-            self,
-            issue_key: str,
-            fields_to_update: dict
+        self,
+        issue_key: str,
+        fields_to_update: dict
     ) -> Optional[Issue]:
         try:
             issue = self.jira_client.issue(issue_key)
@@ -395,11 +396,11 @@ class JiraPlus:
             self.logger.exception(f"Exception - Attachment {file_path} was not uploaded to issue {issue_key}\n{err}")
 
     def transition_issue(
-            self,
-            issue_key: str,
-            transition_name: str,
-            fields: Optional[dict] = None,
-            comment: Optional[str] = None,
+        self,
+        issue_key: str,
+        transition_name: str,
+        fields: Optional[dict] = None,
+        comment: Optional[str] = None,
     ) -> bool:
         try:
             transitions = self.jira_client.transitions(issue_key)

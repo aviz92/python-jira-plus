@@ -1,13 +1,13 @@
 # create_jira_issue.py
 
 import logging
-from custom_python_logger.logger import get_logger
+from custom_python_logger.logger import build_logger
 
 from python_jira_plus import JiraPlus
 
 
 def main():
-    _ = get_logger(
+    _ = build_logger(
         project_name='Logger Project Test',
         log_level=logging.DEBUG,
         extra={'user': 'test_user'}
