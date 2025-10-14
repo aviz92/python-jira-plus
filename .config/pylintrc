@@ -1,0 +1,27 @@
+[MASTER]
+
+[FORMAT]
+max-line-length=120
+max-attributes=10
+max-args=10
+
+[MESSAGES CONTROL]
+disable =
+    C0103,      # Invalid name - We use snake_case for variable names
+    C0114,      # Missing module docstring - We prefer to omit module docstrings
+    C0115,      # Missing class docstring - Classes are self-explanatory
+    C0116,      # Missing function or method docstring - Some utility functions do not require docstrings
+    C2801,      # Unnecessarily calls dunder method __str__
+    E0401,      # Import error - We use relative imports in some cases
+    R0801,      # Similar lines in files - We have many similar lines in our test files
+    R0903,      # Too few public methods - We have many utility functions
+    W0105,      # String statement has no effect
+    W0718,      # Catching too general exception
+    W0719,      # Raising too general exception
+    W0511,      # TODO / FIXME
+    W1203,      # Use % formatting in logging functions
+    W1514,      # Using open with a file descriptor
+    R2044,      # Line with empty comment
+    R2004,      # magic-value-comparison
+    W0717,      # too-many-try-statements
+    C0199,      # docstring-first-line-empty

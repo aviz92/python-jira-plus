@@ -5,10 +5,11 @@ import logging
 import os
 import time
 from enum import Enum
-from typing import Any, Union, Optional
+from typing import Any
+
 import requests
 from custom_python_logger import get_logger
-from jira import JIRA, JIRAError, Issue
+from jira import JIRA, Issue, JIRAError
 from jira.client import ResultList
 from retrying import retry
 
@@ -16,36 +17,37 @@ from python_jira_plus.describe_allowed_value import describe_allowed_value
 
 
 class UrlScheme(Enum):
-    HTTP = 'http'
-    HTTPS = 'https'
+    HTTP = "http"
+    HTTPS = "https"
 
 
 class ServerType(Enum):
-    CLOUD = 'cloud'
-    ON_PREMISE = 'on_premise'
+    CLOUD = "cloud"
+    ON_PREMISE = "on_premise"
 
 
 class JiraPlus:
     def __init__(
-        self, base_url: Optional[str] = None,
+        self,
+        base_url: str | None = None,
         server_type: ServerType = ServerType.CLOUD,
         urllib3_log_level: int = logging.WARNING,
-        jira_username: Optional[str] = None,
-        jira_token: Optional[str] = None,  # Use API token (not PAT)
+        jira_username: str | None = None,
+        jira_token: str | None = None,  # Use API token (not PAT)
         verify_ssl: bool = True,
         sso: bool = False,
-        url_scheme: UrlScheme = UrlScheme.HTTPS
+        url_scheme: UrlScheme = UrlScheme.HTTPS,
     ) -> None:
         self.logger = get_logger(self.__class__.__name__)
         get_logger("urllib3").setLevel(urllib3_log_level)
 
-        self.jira_username = jira_username or os.getenv('JIRA_USER_NAME')
-        self.jira_token = jira_token or os.getenv('JIRA_TOKEN')
-        self.base_url = base_url or os.getenv('JIRA_BASE_URL')
+        self.jira_username = jira_username or os.getenv("JIRA_USER_NAME")
+        self.jira_token = jira_token or os.getenv("JIRA_TOKEN")
+        self.base_url = base_url or os.getenv("JIRA_BASE_URL")
         self.url_scheme = url_scheme.value
 
         self.server_type = server_type
-        self.server = f'{self.url_scheme}://{self.base_url}'
+        self.server = f"{self.url_scheme}://{self.base_url}"
         self.verify_ssl = verify_ssl
         self.sso = sso
 
@@ -53,26 +55,23 @@ class JiraPlus:
         self.check_client_connection()
 
     @retry(stop_max_attempt_number=3, wait_fixed=180000)
-    def create_connection(self, timeout=580) -> Optional[JIRA]:
-        if self.server_type == ServerType.ON_PREMISE and not self.sso:
+    def create_connection(self, timeout: int = 580) -> JIRA | None:
+        if self.server_type == ServerType.ON_PREMISE and not self.sso:  # pylint: disable=W0160:
             jira_client = JIRA(
-                token_auth=self.jira_token,
-                options={'server': self.server, 'verify': self.verify_ssl},
-                timeout=timeout
+                token_auth=self.jira_token, options={"server": self.server, "verify": self.verify_ssl}, timeout=timeout
             )
         else:
             jira_client = JIRA(
                 basic_auth=(self.jira_username, self.jira_token),
-                options={'server': self.server, 'verify': self.verify_ssl},
-                timeout=timeout
+                options={"server": self.server, "verify": self.verify_ssl},
+                timeout=timeout,
             )
 
         if jira_client.projects():
-            self.logger.info(f"Jira Connection Successful")
+            self.logger.info("Jira Connection Successful")
             return jira_client
-        else:
-            self.logger.error(f"Jira Connection Failed")
-            raise JIRAError("Jira Connection Failed")
+        self.logger.error("Jira Connection Failed")
+        raise JIRAError("Jira Connection Failed")
 
     def close_connection(self) -> None:
         try:
@@ -88,9 +87,8 @@ class JiraPlus:
         try:
             if self.jira_client.projects():
                 return True
-            else:
-                self.logger.info("Jira client is closed")
-                return False
+            self.logger.info("Jira client is closed")
+            return False
         except JIRAError as err:
             self.logger.exception(f"JIRAError \n{err}")
             return False
@@ -99,10 +97,7 @@ class JiraPlus:
             return False
 
     def get_issue_by_key(
-        self,
-        key: str,
-        specific_fields: str | list[str] = '*all',
-        json_result: bool = True
+        self, key: str, specific_fields: str | list[str] = "*all", json_result: bool = True
     ) -> None | Issue | dict[str, Any]:
         try:
             jira_issue = self.jira_client.issue(id=key, fields=specific_fields)
@@ -120,10 +115,10 @@ class JiraPlus:
         self,
         query: str,
         max_results: int = 5000,
-        specific_fields: Union[str, list[str]] = "*all",
+        specific_fields: str | list[str] = "*all",
         jira_err_count: int = 3,
         json_result: bool = True,
-    ) -> Optional[Union[ResultList[Issue], dict]]:
+    ) -> ResultList[Issue] | dict | None:
         return self._paginate_query(
             query=query,
             max_results=max_results,
@@ -136,14 +131,14 @@ class JiraPlus:
         self,
         query: str,
         max_results: int,
-        specific_fields: Union[str, list[str]],
+        specific_fields: str | list[str],
         jira_err_limit: int,
-        json_result: bool
-    ) -> Union[ResultList[Issue] | list]:
+        json_result: bool,
+    ) -> ResultList[Issue] | list:
         start_at = 0
         all_issues = []
         retries = 0
-        while True:
+        while True:  # pylint: disable=W0149
             try:
                 self.logger.debug(f"Fetching issues from startAt={start_at}")
                 page = self.jira_client.search_issues(
@@ -151,11 +146,11 @@ class JiraPlus:
                     startAt=start_at,
                     maxResults=max_results,
                     fields=specific_fields,
-                    json_result=json_result
+                    json_result=json_result,
                 )
-                all_issues += page['issues'] if json_result else page
+                all_issues += page["issues"] if json_result else page
                 if json_result:
-                    start_at += page['maxResults']
+                    start_at += page["maxResults"]
                 else:
                     start_at += page.maxResults
                 if start_at >= max_results:
@@ -164,7 +159,7 @@ class JiraPlus:
             except JIRAError as err:
                 if err.status_code == 400:
                     self.logger.error(f"Bad Request: {err.text}")
-                    raise JIRAError(f"Bad Request: {err.text}")
+                    raise JIRAError(f"Bad Request: {err.text}") from err
                 retries += 1
                 self.logger.warning(f"Retry {retries}/{jira_err_limit} after JIRAError: {err}")
                 if retries >= jira_err_limit:
@@ -175,19 +170,13 @@ class JiraPlus:
 
     def _fetch_metadata(self, project_key: str, issue_type: str) -> tuple[dict, dict]:
         meta = self.jira_client.createmeta(
-            projectKeys=project_key,
-            issuetypeNames=issue_type,
-            expand="projects.issuetypes.fields"
+            projectKeys=project_key, issuetypeNames=issue_type, expand="projects.issuetypes.fields"
         )
 
-        project_meta = next((p for p in meta['projects'] if p['key'] == project_key), None)
-        if not project_meta:
+        if not (project_meta := next((p for p in meta["projects"] if p["key"] == project_key), None)):
             raise ValueError(f"Project {project_key} not found in metadata")
 
-        issue_meta = next(
-            (it for it in project_meta['issuetypes'] if it['name'].lower() == issue_type.lower()),
-            None
-        )
+        issue_meta = next((it for it in project_meta["issuetypes"] if it["name"].lower() == issue_type.lower()), None)
         if not issue_meta:
             raise ValueError(f"Issue type '{issue_type}' not found in project '{project_key}'")
         return meta, issue_meta
@@ -197,47 +186,44 @@ class JiraPlus:
         project_key: str,
         issue_type: str,
         field_id_or_name: str,
-    ) -> Optional[list]:
+    ) -> list | None:
         """
         Returns the allowed values for a specific field in a project + issue type context.
         """
-        fields_metadata = self.get_project_fields_metadata(
-            project_key=project_key,
-            issue_type=issue_type
-        )
+        fields_metadata = self.get_project_fields_metadata(project_key=project_key, issue_type=issue_type)
 
         # Try to find by ID or fallback to case-insensitive name
-        field = fields_metadata.get(field_id_or_name)
-        if not field:
+        if not (field := fields_metadata.get(field_id_or_name)):
             # Try matching by name (case-insensitive)
-            for fid, fmeta in fields_metadata.items():
-                if fmeta['name'].lower() == field_id_or_name.lower():
+            for _, fmeta in fields_metadata.items():
+                if fmeta["name"].lower() == field_id_or_name.lower():
                     field = fmeta
                     break
 
         if not field:
             raise ValueError(
-                f"Field '{field_id_or_name}' not found in project '{project_key}' with issue type '{issue_type}'")
+                f"Field '{field_id_or_name}' not found in project '{project_key}' with issue type '{issue_type}'"
+            )
 
-        allowed = field.get('allowedValues')
-        if not allowed:
+        if not (allowed := field.get("allowedValues")):
             self.logger.info(f"No allowed values found for field '{field_id_or_name}'")
             return None
 
         return allowed
 
-    def _is_value_allowed(self, value: Any, allowed_values: list[Any]) -> bool:
-        allowed_names = {av.get('name') for av in allowed_values}
-        allowed_keys = {av.get('key') for av in allowed_values}
+    @staticmethod
+    def _is_value_allowed(value: Any, allowed_values: list[Any]) -> bool:
+        allowed_names = {av.get("name") for av in allowed_values}
+        allowed_keys = {av.get("key") for av in allowed_values}
         allowed_values = allowed_names | allowed_keys
         return describe_allowed_value(value, allowed_values=allowed_values)
 
-    def get_server_version(self):
-        return tuple(self.jira_client.server_info()['versionNumbers'])
+    def get_server_version(self) -> tuple[int, ...]:
+        return tuple(self.jira_client.server_info()["versionNumbers"])
 
     def check_server_createmeta_compatibility(self) -> bool:
         server_version = self.get_server_version()
-        if self.server_type == ServerType.ON_PREMISE and ''.join(str(x) for x in server_version) > '9.0.0':
+        if self.server_type == ServerType.ON_PREMISE and "".join(str(x) for x in server_version) > "9.0.0":
             self.logger.warning(
                 f"JIRA server version {server_version} is below the minimum required version (9.0.0). "
                 "Some features may not work as expected."
@@ -247,49 +233,43 @@ class JiraPlus:
 
     def get_project_fields_metadata(self, project_key: str, issue_type: str) -> dict:
         if self.check_server_createmeta_compatibility():
-            meta, issue_meta = self._fetch_metadata(project_key=project_key, issue_type=issue_type)
-            return issue_meta['fields']
-        else:
-            _project_issue_types = self.jira_client.project_issue_types(project_key)
-            _issue_types = {t.name: t for t in _project_issue_types}
-            field_list = self.jira_client.project_issue_fields(project_key, _issue_types[issue_type].id)
-            return {f.fieldId: f.raw for f in field_list}
+            _, issue_meta = self._fetch_metadata(project_key=project_key, issue_type=issue_type)
+            return issue_meta["fields"]
+        _project_issue_types = self.jira_client.project_issue_types(project_key)
+        _issue_types = {t.name: t for t in _project_issue_types}
+        field_list = self.jira_client.project_issue_fields(project_key, _issue_types[issue_type].id)
+        return {f.fieldId: f.raw for f in field_list}
 
-    def validate_fields(
-        self,
-        project_key: str,
-        issue_type: str,
-        fields: Optional[dict] = None
+    def validate_fields(  # pylint: disable=R1260
+        self, project_key: str, issue_type: str, fields: dict | None = None
     ) -> None:
-        fields_metadata = self.get_project_fields_metadata(
-            project_key=project_key,
-            issue_type=issue_type
-        )
+        fields_metadata = self.get_project_fields_metadata(project_key=project_key, issue_type=issue_type)
         for custom_field, value in fields.items():
             if custom_field not in fields_metadata:
                 raise ValueError(
                     f'Invalid field(s) for project "{project_key}", issue type "{issue_type}": "{custom_field}"'
                 )
 
-            if allowed_value := fields_metadata[custom_field].get('allowedValues'):
+            if allowed_value := fields_metadata[custom_field].get("allowedValues"):
                 if not self._is_value_allowed(value=value, allowed_values=allowed_value):
                     raise ValueError(
-                        f"Invalid value '{value}' for field '{custom_field}' in project '{project_key}' with issue type '{issue_type}'."
+                        f"Invalid value '{value}' for field '{custom_field}' in project '{project_key}' "
+                        f"with issue type '{issue_type}'."
                         f"The allowed values are: {json.dumps(allowed_value, indent=4, sort_keys=True)}"
                     )
 
-            field_type = fields_metadata[custom_field]['schema']['type']
-            if field_type == 'string' and not isinstance(value, str):
+            field_type = fields_metadata[custom_field]["schema"]["type"]
+            if field_type == "string" and not isinstance(value, str):
                 raise ValueError(f"Field '{custom_field}' must be a string")
-            elif field_type == 'number' and not isinstance(value, (int, float)):
+            if field_type == "number" and not isinstance(value, int | float):
                 raise ValueError(f"Field '{custom_field}' must be a number")
-            elif field_type == 'boolean' and not isinstance(value, bool):
+            if field_type == "boolean" and not isinstance(value, bool):
                 raise ValueError(f"Field '{custom_field}' must be a boolean")
-            elif field_type == 'array' and not isinstance(value, list):
+            if field_type == "array" and not isinstance(value, list):
                 raise ValueError(f"Field '{custom_field}' must be an array")
-            elif field_type == 'object' and not isinstance(value, dict):
+            if field_type == "object" and not isinstance(value, dict):
                 raise ValueError(f"Field '{custom_field}' must be an object")
-            elif field_type == 'issuetype' and not isinstance(value, dict):
+            if field_type == "issuetype" and not isinstance(value, dict):
                 raise ValueError(f"Field '{custom_field}' must be an issue type")
             # Add more field type checks as needed
 
@@ -299,9 +279,9 @@ class JiraPlus:
         summary: str,
         description: str,
         issue_type: str,
-        assignee: Optional[str] = None,
-        custom_fields: Optional[dict] = None,
-    ) -> Optional[Issue]:
+        assignee: str | None = None,
+        custom_fields: dict | None = None,
+    ) -> Issue | None:
         issue_fields = {
             "project": {"key": project_key},
             "issuetype": {"name": issue_type},
@@ -309,8 +289,9 @@ class JiraPlus:
             "description": description,
         }
         if assignee:
-            issue_fields["assignee"] = {"accountId": assignee} if self.server_type == ServerType.CLOUD else {
-                "name": assignee}
+            issue_fields["assignee"] = (
+                {"accountId": assignee} if self.server_type == ServerType.CLOUD else {"name": assignee}
+            )
 
         if custom_fields:
             issue_fields = issue_fields | custom_fields
@@ -320,17 +301,11 @@ class JiraPlus:
         self.logger.info(f"Issue {issue.key} created successfully.")
         return issue
 
-    def update_issue(
-        self,
-        issue_key: str,
-        fields_to_update: dict
-    ) -> Optional[Issue]:
+    def update_issue(self, issue_key: str, fields_to_update: dict) -> Issue | None:
         try:
             issue = self.jira_client.issue(issue_key)
             self.validate_fields(
-                project_key=issue.fields.project.key,
-                issue_type=issue.fields.issuetype.name,
-                fields=fields_to_update
+                project_key=issue.fields.project.key, issue_type=issue.fields.issuetype.name, fields=fields_to_update
             )
 
             issue.update(fields=fields_to_update)
@@ -399,12 +374,12 @@ class JiraPlus:
         self,
         issue_key: str,
         transition_name: str,
-        fields: Optional[dict] = None,
-        comment: Optional[str] = None,
+        fields: dict | None = None,
+        comment: str | None = None,
     ) -> bool:
         try:
             transitions = self.jira_client.transitions(issue_key)
-            transition_names = {t['name'] for t in transitions}
+            transition_names = {t["name"] for t in transitions}
             if transition_name not in transition_names:
                 self.logger.error(
                     f"Transition '{transition_name}' not found for issue {issue_key}. "
@@ -412,19 +387,13 @@ class JiraPlus:
                 )
                 return False
 
-            transition_id = next(
-                (t['id'] for t in transitions if t['name'].lower() == transition_name.lower()),
-                None
-            )
+            transition_id = next((t["id"] for t in transitions if t["name"].lower() == transition_name.lower()), None)
             if not transition_id:
                 self.logger.error(f"Transition '{transition_name}' not found for issue {issue_key}")
                 return False
 
             self.jira_client.transition_issue(
-                issue=issue_key,
-                transition=transition_id,
-                fields=fields or {},
-                comment=comment or None
+                issue=issue_key, transition=transition_id, fields=fields or {}, comment=comment or None
             )
             self.logger.info(f"Issue {issue_key} transitioned to '{transition_name}'")
             return True
@@ -436,15 +405,16 @@ class JiraPlus:
             return False
 
     def get_account_data(self, user_mail: str) -> list[dict]:
-        jira_rst_url = \
-            f'https://{self.jira_username}:{self.jira_token}@{self.base_url}/rest/api/{3}/user/search?query={user_mail}'
+        jira_rst_url = (
+            f"https://{self.jira_username}:{self.jira_token}@{self.base_url}/rest/api/{3}/user/search?query={user_mail}"
+        )
         response = requests.get(jira_rst_url)
         return response.json()
 
     def get_account_id(self, user_mail: str) -> str:
         data = self.get_account_data(user_mail=user_mail)
-        return data[0]['accountId']
+        return data[0]["accountId"]
 
     def get_account_display_name(self, user_display_name: str) -> str:
         data = self.get_account_data(user_mail=user_display_name)
-        return data[0]['displayName']
+        return data[0]["displayName"]

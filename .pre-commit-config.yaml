@@ -1,0 +1,79 @@
+# https://pre-commit.com
+# https://github.com/pre-commit
+
+repos: # Black → isort → Ruff (fix=false) → Pylint
+  # ### pre-commit-hooks ###
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: trailing-whitespace         # Removes trailing spaces
+      - id: end-of-file-fixer           # Ensures a file ends with a newline
+      - id: check-merge-conflict        # Checks for merge conflict markers
+      - id: check-added-large-files     # Prevents committing large files
+        args: [ "--maxkb=100" ]         # Adjust size limit as needed
+      - id: check-yaml                  # Validates YAML syntax
+      - id: check-json                  # Validates JSON syntax
+      - id: check-toml                  # Validates TOML files
+      - id: debug-statements            # Detects debug prints (e.g. `print`, `pdb`)
+      - id: pretty-format-json          # Formats JSON files
+        args: [
+          "--autofix",
+          "--no-sort-keys",
+          "--indent",
+          "4",
+        ]
+      - id: check-ast                   # Validates Python syntax
+        name: Check Python syntax
+        types: [ python ]               # Only run on Python files
+      - id: detect-private-key          # Detects private keys in files
+      - id: mixed-line-ending           # Detects mixed line endings
+
+      # - id: requirements-txt-fixer    # Sorts and removes duplicates in requirements.txt files
+      # - id: double-quote-string-fixer # Converts single quotes to double quotes in strings
+      # - id: name-tests-test # Ensures test files, classes, and functions are named starting with 'test'
+
+    # ### black ###
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+        name: Black (Python code formatter)
+        args: [
+          "--config=.config/black.toml"
+        ]
+        language_version: python3
+
+    # ### isort ###
+  - repo: https://github.com/pycqa/isort  # not needed if using ruff fix=true
+    rev: 6.0.1
+    hooks:
+      - id: isort
+        name: Isort (Sort imports alphabetically)
+        args: [
+          "--settings-path=.config/isort.cfg"
+        ]
+        types: [ python ]
+
+    # ### ruff ###
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.7
+    hooks:
+      - id: ruff
+        name: Ruff (Python linter)
+        args: [
+          "--fix",
+          "--config=.config/ruff.toml"
+        ]
+        types: [ python ]
+
+    # ### pylint ###
+  - repo: https://github.com/pycqa/pylint
+    rev: v3.0.3
+    hooks:
+      - id: pylint
+        name: Pylint (Python linter)
+        args:
+          - "--rcfile=.config/pylintrc"
+          - "--init-hook=import sys; sys.path.insert(0, 'src')"
+          - "--enable-all-extensions"
+        additional_dependencies: [ "pylint-django", "pylint-flask" ]
