@@ -7,7 +7,7 @@ from custom_python_logger.logger import build_logger
 from python_jira_plus import BASIC_FIELDS
 from python_jira_plus.jira_plus import JiraPlus
 
-QUERY = 'project = SCRUM order by created DESC'
+QUERY = 'project = "JIRA TEST" AND issuetype = Story'
 
 
 def main() -> None:
