@@ -119,13 +119,54 @@ class JiraPlus:
         jira_err_count: int = 3,
         json_result: bool = True,
     ) -> ResultList[Issue] | dict | None:
-        return self._paginate_query(
+        if self.server_type == ServerType.ON_PREMISE:
+            _paginate_query_func = self._paginate_query
+        else:
+            _paginate_query_func = self._paginate_query_new
+        return _paginate_query_func(
             query=query,
             max_results=max_results,
             specific_fields=specific_fields,
             jira_err_limit=jira_err_count,
             json_result=json_result,
         )
+
+    def _paginate_query_new(
+        self,
+        query: str,
+        max_results: int,
+        specific_fields: str | list[str],
+        jira_err_limit: int,
+        json_result: bool,
+    ) -> ResultList[Issue] | list:
+        all_issues = []
+        retries = 0
+        page = None
+        while True:  # pylint: disable=W0149
+            try:
+                self.logger.debug(f"Fetching issues from startAt={len(all_issues)}")
+                page = self.jira_client.enhanced_search_issues(
+                    jql_str=query,
+                    nextPageToken=page['nextPageToken'] if page else None,
+                    maxResults=max_results,
+                    fields=specific_fields,
+                    json_result=json_result,
+                )
+                all_issues += page["issues"] if json_result else page
+                if page['isLast']:
+                    break
+                retries = 0  # reset on success
+            except JIRAError as err:
+                if err.status_code == 400:
+                    self.logger.error(f"Bad Request: {err.text}")
+                    raise JIRAError(f"Bad Request: {err.text}") from err
+                retries += 1
+                self.logger.warning(f"Retry {retries}/{jira_err_limit} after JIRAError: {err}")
+                if retries >= jira_err_limit:
+                    self.logger.exception("Max retries exceeded.")
+                    return []
+                time.sleep(300 if retries == jira_err_limit - 1 else 90)
+        return all_issues
 
     def _paginate_query(
         self,
@@ -141,7 +182,7 @@ class JiraPlus:
         while True:  # pylint: disable=W0149
             try:
                 self.logger.debug(f"Fetching issues from startAt={start_at}")
-                page = self.jira_client.search_issues(
+                page = self.jira_client.enhanced_search_issues(
                     jql_str=query,
                     startAt=start_at,
                     maxResults=max_results,
