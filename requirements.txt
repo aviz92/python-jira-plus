@@ -1,9 +1,0 @@
-setuptools
-wheel
-dotenv
-pre-commit
-custom-python-logger
-pytest
-requests
-retrying
-jira

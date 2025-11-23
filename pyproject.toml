@@ -2,10 +2,42 @@
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.black]
-line-length = 100
-target-version = ["py39", "py310", "py311"]
+[project]
+name = "python-jira-plus"
+version = "2.0.2"
+description = "Enhanced Python client for JIRA with better error handling, pagination, and metadata validation."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Avi Zaguri" },]
+keywords = ["development", "jira", "atlassian", "api", "client", "python"]
 
-[tool.isort]
-profile = "black"
-line_length = 100
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+    "Topic :: System :: Logging",
+]
+
+dependencies = [
+    "custom-python-logger>=2.0.10",
+    "dotenv>=0.9.9",
+    "jira>=3.10.5",
+    "pre-commit>=4.5.0",
+    "pytest>=9.0.1",
+    "requests>=2.32.5",
+    "retrying>=1.4.2",
+    "setuptools>=80.9.0",
+    "wheel>=0.45.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/aviz92/python-jira-plus"
+Repository = "https://github.com/aviz92/python-jira-plus"
+Issues = "https://github.com/aviz92/python-jira-plus/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["python_jira_plus*"]
+namespaces = false
