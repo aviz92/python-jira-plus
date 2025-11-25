@@ -152,6 +152,9 @@ class JiraPlus:
                     fields=specific_fields,
                     json_result=json_result,
                 )
+                if not page:
+                    break
+
                 all_issues += page["issues"] if json_result else page
                 if page['isLast']:
                     break
@@ -189,6 +192,9 @@ class JiraPlus:
                     fields=specific_fields,
                     json_result=json_result,
                 )
+                if not page:
+                    break
+
                 all_issues += page["issues"] if json_result else page
                 if json_result:
                     start_at += page["maxResults"]
