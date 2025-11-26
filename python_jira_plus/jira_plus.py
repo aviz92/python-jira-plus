@@ -185,7 +185,7 @@ class JiraPlus:
         while True:  # pylint: disable=W0149
             try:
                 self.logger.debug(f"Fetching issues from startAt={start_at}")
-                page = self.jira_client.enhanced_search_issues(
+                page = self.jira_client.search_issues(
                     jql_str=query,
                     startAt=start_at,
                     maxResults=max_results,

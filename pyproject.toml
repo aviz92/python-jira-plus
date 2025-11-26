@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "python-jira-plus"
-version = "2.0.3"
+version = "2.0.4"
 description = "Enhanced Python client for JIRA with better error handling, pagination, and metadata validation."
 readme = "README.md"
 requires-python = ">=3.11"
