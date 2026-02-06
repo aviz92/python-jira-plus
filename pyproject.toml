@@ -4,20 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "python-jira-plus"
-version = "2.0.4"
+version = "2.0.5"
 description = "Enhanced Python client for JIRA with better error handling, pagination, and metadata validation."
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { text = "MIT" }
 authors = [{ name = "Avi Zaguri" },]
 keywords = ["development", "jira", "atlassian", "api", "client", "python"]
 
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
-    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
-    "Topic :: System :: Logging",
+    "Topic :: System :: Jira",
 ]
 
 dependencies = [
