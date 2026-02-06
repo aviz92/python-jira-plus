@@ -17,7 +17,7 @@ classifiers = [
     "Intended Audience :: Developers",
     "Programming Language :: Python :: 3.12",
     "Operating System :: OS Independent",
-    "Topic :: System :: Jira",
+    "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 dependencies = [
