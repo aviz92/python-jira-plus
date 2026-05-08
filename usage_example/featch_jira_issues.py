@@ -7,7 +7,8 @@ from custom_python_logger.logger import build_logger
 from python_jira_plus import BASIC_FIELDS
 from python_jira_plus.jira_plus import JiraPlus
 
-QUERY = 'project = "JIRA TEST" AND issuetype = Story'
+# QUERY = 'project = "JIRA TEST" AND issuetype = Story'
+QUERY = 'project = "SUP" AND issuetype = "[System] Service request"'
 
 
 def main() -> None:
@@ -19,6 +20,13 @@ def main() -> None:
         specific_fields=BASIC_FIELDS,
         max_results=300,
     )
+    print()
+    comp = jira_plus.get_allowed_values(
+        project_key="SUP",
+        issue_type="[System] Service request",
+        field_id_or_name="Priority"
+    )
+    print()
 
 
 if __name__ == "__main__":

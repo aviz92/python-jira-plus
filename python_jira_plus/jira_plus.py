@@ -12,7 +12,7 @@ from custom_python_logger import get_logger
 from jira import JIRA, Issue, JIRAError
 from jira.client import ResultList
 from retrying import retry
-
+from packaging.version import Version
 from python_jira_plus.describe_allowed_value import describe_allowed_value
 
 
@@ -270,9 +270,12 @@ class JiraPlus:
 
     def check_server_createmeta_compatibility(self) -> bool:
         server_version = self.get_server_version()
-        if self.server_type == ServerType.ON_PREMISE and "".join(str(x) for x in server_version) > "9.0.0":
+        if (
+                self.server_type == ServerType.ON_PREMISE and
+                Version(".".join(str(x) for x in server_version)) > Version("9.0.0")
+        ):
             self.logger.warning(
-                f"JIRA server version {server_version} is below the minimum required version (9.0.0). "
+                f"JIRA server version {server_version} is not fully compatible with createmeta-based field validation. "
                 "Some features may not work as expected."
             )
             return False
