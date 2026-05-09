@@ -8,7 +8,7 @@ pagination, metadata validation, and more.
 from dotenv import load_dotenv
 
 from python_jira_plus.describe_allowed_value import describe_allowed_value
-from python_jira_plus.jira_plus import JiraPlus, ServerType
+from python_jira_plus.jira_plus import JiraPlus, ServerType, UrlScheme
 
 load_dotenv()
 
@@ -27,4 +27,4 @@ BASIC_FIELDS = [
     "resolution",
     "parent",
 ]
-__all__ = ["JiraPlus", "ServerType", "BASIC_FIELDS"]
+__all__ = ["JiraPlus", "ServerType", "UrlScheme", "BASIC_FIELDS"]

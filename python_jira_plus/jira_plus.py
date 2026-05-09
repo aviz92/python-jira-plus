@@ -55,8 +55,8 @@ class JiraPlus:
         self.check_client_connection()
 
     @retry(stop_max_attempt_number=3, wait_fixed=180000)
-    def create_connection(self, timeout: int = 580) -> JIRA | None:
-        if self.server_type == ServerType.ON_PREMISE and not self.sso:  # pylint: disable=W0160:
+    def create_connection(self, timeout: int = 580) -> JIRA:
+        if self.server_type == ServerType.ON_PREMISE and not self.sso:
             jira_client = JIRA(
                 token_auth=self.jira_token, options={"server": self.server, "verify": self.verify_ssl}, timeout=timeout
             )
