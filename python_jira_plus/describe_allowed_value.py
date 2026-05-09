@@ -11,17 +11,17 @@ def describe_allowed_value(value: Any, allowed_values: set = None) -> bool:
 
 @describe_allowed_value.register
 def _(value: int, allowed_values: list = None) -> bool:
-    return value == allowed_values
+    return value in allowed_values
 
 
 @describe_allowed_value.register
 def _(value: float, allowed_values: list = None) -> bool:
-    return value == allowed_values
+    return value in allowed_values
 
 
 @describe_allowed_value.register
 def _(value: str, allowed_values: list = None) -> bool:
-    return value == allowed_values
+    return value in allowed_values
 
 
 @describe_allowed_value.register

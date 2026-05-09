@@ -280,8 +280,8 @@ class JiraPlus:
             use_legacy = Version(".".join(str(x) for x in self.server_version)) < Version("9.0.0")
             self.logger.debug(f"Using {'legacy createmeta' if use_legacy else 'project_issue_types'} API (ON_PREMISE {self.server_version})")
             return use_legacy
-        self.logger.debug("Using project_issue_types API (Cloud)")
-        return False
+        self.logger.debug("Using legacy createmeta API (Cloud)")
+        return True
 
     def get_project_fields_metadata(self, project_key: str, issue_type: str) -> dict:
         if self.use_legacy_api:
