@@ -53,6 +53,8 @@ class JiraPlus:
 
         self.jira_client = self.create_connection()
         self.check_client_connection()
+        self.server_version = self.get_server_version()
+        self.use_legacy_api = self._resolve_use_legacy_api()
 
     @retry(stop_max_attempt_number=3, wait_fixed=180000)
     def create_connection(self, timeout: int = 580) -> JIRA:
@@ -273,21 +275,16 @@ class JiraPlus:
     def get_server_version(self) -> tuple[int, ...]:
         return tuple(self.jira_client.server_info()["versionNumbers"])
 
-    def check_server_createmeta_compatibility(self) -> bool:
-        server_version = self.get_server_version()
-        if (
-                self.server_type == ServerType.ON_PREMISE and
-                Version(".".join(str(x) for x in server_version)) < Version("9.0.0")
-        ):
-            self.logger.warning(
-                f"JIRA server version {server_version} is not fully compatible with createmeta-based field validation. "
-                "Some features may not work as expected."
-            )
-            return False
-        return True
+    def _resolve_use_legacy_api(self) -> bool:
+        if self.server_type == ServerType.ON_PREMISE:
+            use_legacy = Version(".".join(str(x) for x in self.server_version)) < Version("9.0.0")
+            self.logger.debug(f"Using {'legacy createmeta' if use_legacy else 'project_issue_types'} API (ON_PREMISE {self.server_version})")
+            return use_legacy
+        self.logger.debug("Using project_issue_types API (Cloud)")
+        return False
 
     def get_project_fields_metadata(self, project_key: str, issue_type: str) -> dict:
-        if self.check_server_createmeta_compatibility():
+        if self.use_legacy_api:
             _, issue_meta = self._fetch_metadata(project_key=project_key, issue_type=issue_type)
             return issue_meta["fields"]
         _project_issue_types = self.jira_client.project_issue_types(project_key)
