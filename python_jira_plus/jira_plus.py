@@ -142,12 +142,16 @@ class JiraPlus:
         all_issues = []
         retries = 0
         page = None
-        while True:  # pylint: disable=W0149
+        while True:
             try:
+                next_token = None
+                if page is not None:
+                    next_token = page.get('nextPageToken') if json_result else page.nextPageToken
+
                 self.logger.debug(f"Fetching issues from startAt={len(all_issues)}")
                 page = self.jira_client.enhanced_search_issues(
                     jql_str=query,
-                    nextPageToken=page['nextPageToken'] if page else None,
+                    nextPageToken=next_token,
                     maxResults=max_results,
                     fields=specific_fields,
                     json_result=json_result,
@@ -156,7 +160,8 @@ class JiraPlus:
                     break
 
                 all_issues += page["issues"] if json_result else page
-                if page['isLast']:
+                is_last = page['isLast'] if json_result else page.isLast
+                if is_last:
                     break
                 retries = 0  # reset on success
             except JIRAError as err:
@@ -370,7 +375,7 @@ class JiraPlus:
 
     def delete_issue(self, issue_key: str) -> bool:
         try:
-            issue = self.get_issue_by_key(key=issue_key)
+            issue = self.get_issue_by_key(key=issue_key, json_result=False)
             issue.delete()
             self.logger.info(f"Issue {issue_key} deleted successfully.")
             return True
@@ -455,10 +460,13 @@ class JiraPlus:
             return False
 
     def get_account_data(self, user_mail: str) -> list[dict]:
-        jira_rst_url = (
-            f"https://{self.jira_username}:{self.jira_token}@{self.base_url}/rest/api/{3}/user/search?query={user_mail}"
+        response = requests.get(
+            f"{self.server}/rest/api/3/user/search",
+            params={"query": user_mail},
+            auth=(self.jira_username, self.jira_token),
+            timeout=30,
         )
-        response = requests.get(jira_rst_url)
+        response.raise_for_status()
         return response.json()
 
     def get_account_id(self, user_mail: str) -> str:
