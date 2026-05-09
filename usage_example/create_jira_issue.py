@@ -4,13 +4,13 @@ import logging
 
 from custom_python_logger.logger import build_logger
 
-from python_jira_plus import JiraPlus
+from python_jira_plus import JiraCloud
 
 
 def main() -> None:
     _ = build_logger(project_name="Logger Project Test", log_level=logging.DEBUG, extra={"user": "test_user"})
 
-    jira_plus = JiraPlus()
+    jira_plus = JiraCloud()
     _ = jira_plus.create_issue(
         project_key="SCRUM",
         issue_type="Story",
