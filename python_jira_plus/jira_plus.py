@@ -272,7 +272,7 @@ class JiraPlus:
         server_version = self.get_server_version()
         if (
                 self.server_type == ServerType.ON_PREMISE and
-                Version(".".join(str(x) for x in server_version)) > Version("9.0.0")
+                Version(".".join(str(x) for x in server_version)) < Version("9.0.0")
         ):
             self.logger.warning(
                 f"JIRA server version {server_version} is not fully compatible with createmeta-based field validation. "
