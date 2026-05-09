@@ -22,7 +22,7 @@ classifiers = [
 
 dependencies = [
     "custom-python-logger>=2.0.10",
-    "dotenv>=0.9.9",
+    "python-dotenv>=1.0.0",
     "jira>=3.10.5",
     "packaging>=26.2",
     "requests>=2.32.5",
