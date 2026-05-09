@@ -25,10 +25,14 @@ dependencies = [
     "dotenv>=0.9.9",
     "jira>=3.10.5",
     "packaging>=26.2",
-    "pre-commit>=4.5.0",
-    "pytest>=9.0.1",
     "requests>=2.32.5",
     "retrying>=1.4.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pre-commit>=4.5.0",
+    "pytest>=9.0.1",
     "setuptools>=80.9.0",
     "wheel>=0.45.1",
 ]
