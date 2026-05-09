@@ -30,7 +30,7 @@ pip install python-jira-plus
 ---
 
 ## Requirements
-- Python 3.9+
+- Python 3.12+
 - `jira` package
 - `retrying` package
 - `custom-python-logger` package
