@@ -291,7 +291,7 @@ class JiraPlus:
         return {f.fieldId: f.raw for f in field_list}
 
     def validate_fields(  # pylint: disable=R1260
-        self, project_key: str, issue_type: str, fields: dict | None = None
+        self, project_key: str, issue_type: str, fields: dict
     ) -> None:
         fields_metadata = self.get_project_fields_metadata(project_key=project_key, issue_type=issue_type)
         for custom_field, value in fields.items():
