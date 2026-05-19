@@ -5,7 +5,7 @@ import logging
 from custom_python_logger.logger import build_logger
 
 from python_jira_plus import BASIC_FIELDS, JiraCloud
-from python_jira_plus.const import LOGGER_NAME
+from python_jira_plus.consts import LOGGER_NAME
 
 # QUERY = 'project = "JIRA TEST" AND issuetype = Story'
 QUERY = 'project = "SUP" AND issuetype = "[System] Service request"'

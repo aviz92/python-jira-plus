@@ -5,7 +5,7 @@ import logging
 from custom_python_logger.logger import build_logger
 
 from python_jira_plus import JiraCloud
-from python_jira_plus.const import LOGGER_NAME
+from python_jira_plus.consts import LOGGER_NAME
 
 ISSUE_KEY = "Test-123"
 
