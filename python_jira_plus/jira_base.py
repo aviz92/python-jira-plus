@@ -11,6 +11,7 @@ from custom_python_logger import get_logger
 from jira import JIRA, Issue, JIRAError
 from jira.client import ResultList
 
+from python_jira_plus.const import LOGGER_NAME
 from python_jira_plus.describe_allowed_value import describe_allowed_value
 
 
@@ -31,7 +32,7 @@ class JiraBase(ABC):
         verify_ssl: bool = True,
         url_scheme: UrlScheme = UrlScheme.HTTPS,
     ) -> None:
-        self.logger = get_logger(self.__class__.__name__)
+        self.logger = get_logger(LOGGER_NAME)
         get_logger("urllib3").setLevel(urllib3_log_level)
 
         self.jira_username = jira_username or os.getenv("JIRA_USER_NAME")

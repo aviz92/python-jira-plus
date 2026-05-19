@@ -5,10 +5,11 @@ import logging
 from custom_python_logger.logger import build_logger
 
 from python_jira_plus import JiraCloud
+from python_jira_plus.const import LOGGER_NAME
 
 
 def main() -> None:
-    _ = build_logger(project_name="Logger Project Test", log_level=logging.DEBUG, extra={"user": "test_user"})
+    _ = build_logger(project_name=LOGGER_NAME, log_level=logging.DEBUG, extra={"user": "test_user"})
 
     jira_plus = JiraCloud()
     _ = jira_plus.create_issue(
