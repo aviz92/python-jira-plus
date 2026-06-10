@@ -6,7 +6,6 @@ import time
 import requests
 from jira import JIRA, Issue, JIRAError
 from jira.client import ResultList
-from retrying import retry
 
 from python_jira_plus.jira_base import JiraBase, UrlScheme
 
@@ -32,7 +31,6 @@ class JiraCloud(JiraBase):
             url_scheme=url_scheme,
         )
 
-    @retry(stop_max_attempt_number=3, wait_fixed=180000)
     def create_connection(self, timeout: int = 580) -> JIRA:
         jira_client = JIRA(
             basic_auth=(self.jira_username, self.jira_token),
