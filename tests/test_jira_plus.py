@@ -8,20 +8,6 @@ from python_jira_plus.jira_cloud import JiraCloud
 from python_jira_plus.jira_on_premise import JiraOnPremise
 
 
-def _make_issue_type_mock(name: str, issue_id: str) -> MagicMock:
-    mock = MagicMock()
-    mock.name = name
-    mock.id = issue_id
-    return mock
-
-
-def _make_field_mock(field_id: str, raw: dict) -> MagicMock:
-    mock = MagicMock()
-    mock.fieldId = field_id
-    mock.raw = raw
-    return mock
-
-
 class TestResolveLegacyApi:
     def test_cloud_uses_legacy_api(self, jira_plus_cloud: JiraCloud) -> None:
         assert (
@@ -177,7 +163,6 @@ class TestPaginateQueryNew:
             query="project = PROJ",
             max_results=50,
             specific_fields="*all",
-            jira_err_limit=3,
             json_result=True,
         )
 
@@ -192,7 +177,6 @@ class TestPaginateQueryNew:
             query="project = PROJ",
             max_results=50,
             specific_fields="*all",
-            jira_err_limit=3,
             json_result=True,
         )
 
@@ -205,7 +189,6 @@ class TestPaginateQueryNew:
             query="project = PROJ",
             max_results=50,
             specific_fields="*all",
-            jira_err_limit=3,
             json_result=True,
         )
 
@@ -219,8 +202,7 @@ class TestPaginateQueryNew:
                 query="invalid JQL !!!",
                 max_results=50,
                 specific_fields="*all",
-                jira_err_limit=3,
-                json_result=True,
+                    json_result=True,
             )
 
 
