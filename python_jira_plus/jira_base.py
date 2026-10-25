@@ -164,8 +164,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
 
     @staticmethod
     def _find_issue_meta(meta: dict, project_key: str, issue_type: str) -> tuple[dict | None, dict | None]:
-        project_meta = next((p for p in meta["projects"] if p["key"] == project_key), None)
-        if project_meta is None:
+        if (project_meta := next((p for p in meta["projects"] if p["key"] == project_key), None)) is None:
             return None, None
         issue_meta = next((it for it in project_meta["issuetypes"] if it["name"].lower() == issue_type.lower()), None)
         return project_meta, issue_meta
@@ -337,8 +336,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         except Exception as err:
             self._handle_error("Failed to retrieve link types from JIRA", err)
             return False
-        canonical = {name.lower(): name for name in available_link_types}.get(link_type.lower())
-        if canonical is None:
+        if (canonical := {name.lower(): name for name in available_link_types}.get(link_type.lower())) is None:
             raise ValueError(f"Invalid link type '{link_type}'. Available link types: {sorted(available_link_types)}")
         try:
             self.jira_client.create_issue_link(

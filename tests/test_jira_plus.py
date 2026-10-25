@@ -202,7 +202,7 @@ class TestPaginateQueryNew:
                 query="invalid JQL !!!",
                 max_results=50,
                 specific_fields="*all",
-                    json_result=True,
+                json_result=True,
             )
 
 

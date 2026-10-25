@@ -78,8 +78,7 @@ class JiraOnPremise(JiraBase):
                 json_result=json_result,
             )
             page = fetch()
-            issues = (page.get("issues") if json_result else list(page)) if page else None
-            if not issues:
+            if not (issues := (page.get("issues") if json_result else list(page)) if page else None):
                 break
             all_issues += issues
             start_at += len(issues)

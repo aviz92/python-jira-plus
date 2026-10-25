@@ -3,6 +3,7 @@
 [FORMAT]
 max-line-length=120
 max-attributes=15
+max-args=8
 
 [MESSAGES CONTROL]
 disable =
