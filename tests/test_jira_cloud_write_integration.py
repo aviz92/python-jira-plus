@@ -41,17 +41,17 @@ SUMMARY_PREFIX = "[python-jira-plus test]"
 RUN_ID = str(int(time.time()))
 
 
-class _NotYetVisible(AssertionError):
+class _NotYetVisibleError(AssertionError):
     """Raised while Jira's search index has not caught up with a write."""
 
 
 def _eventually(check: Callable[[], Any], timeout: float = 30.0) -> Any:
-    """Poll `check` until it stops raising `_NotYetVisible` (Jira search is eventually consistent)."""
+    """Poll `check` until it stops raising `_NotYetVisibleError` (Jira search is eventually consistent)."""
     deadline = time.monotonic() + timeout
     while True:  # pylint: disable=while-used
         try:
             return check()
-        except _NotYetVisible:
+        except _NotYetVisibleError:
             if time.monotonic() >= deadline:
                 raise
             time.sleep(1)
@@ -335,9 +335,8 @@ class TestAttachments:
 class TestQueries:
     def test_get_objects_by_query_finds_created_issue(self, jira: JiraCloud, issue: Issue) -> None:
         def check() -> list:
-            found = jira.get_objects_by_query(f"key = {issue.key}")
-            if not found:
-                raise _NotYetVisible(f"{issue.key} not indexed yet")
+            if not (found := jira.get_objects_by_query(f"key = {issue.key}")):
+                raise _NotYetVisibleError(f"{issue.key} not indexed yet")
             return found
 
         assert _eventually(check)[0]["key"] == issue.key
@@ -347,7 +346,7 @@ class TestQueries:
         def check() -> list:
             found = jira.get_objects_by_query(f"project = {project_key} ORDER BY key", max_results=1, limit=2)
             if len(found) < 2:
-                raise _NotYetVisible("fewer than 2 issues indexed")
+                raise _NotYetVisibleError("fewer than 2 issues indexed")
             return found
 
         assert len(_eventually(check)) == 2

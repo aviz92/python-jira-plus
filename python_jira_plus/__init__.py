@@ -25,4 +25,4 @@ BASIC_FIELDS = [
     "resolution",
     "parent",
 ]
-__all__ = ["JiraBase", "JiraCloud", "JiraOnPremise", "UrlScheme", "BASIC_FIELDS"]
+__all__ = ["JiraBase", "JiraCloud", "JiraOnPremise", "UrlScheme", "BASIC_FIELDS", "describe_allowed_value"]

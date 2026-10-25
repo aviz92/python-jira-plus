@@ -228,8 +228,8 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
 
     @staticmethod
     def _check_field_type(field_id: str, field_type: str | None, value: Any) -> None:
-        if (check := FIELD_TYPE_CHECKS.get(field_type or "")) and not isinstance(value, check[0]):
-            raise ValueError(f"Field '{field_id}' must be {check[1]}")
+        if (check := FIELD_TYPE_CHECKS.get(field_type or "")) and not isinstance(value, check.python_types):
+            raise ValueError(f"Field '{field_id}' must be {check.label}")
 
     def _validate_against_metadata(self, fields_metadata: dict, fields: dict, context: str) -> None:
         for field_id, value in fields.items():
