@@ -19,6 +19,8 @@ from python_jira_plus.consts import (
     SCHEME_PATTERN,
 )
 from python_jira_plus.describe_allowed_value import describe_allowed_value
+from python_jira_plus.helpers import allowed_value_label, check_issue_ref
+from python_jira_plus.types import CreateField
 
 
 class UrlScheme(Enum):
@@ -125,6 +127,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
     def get_issue_by_key(
         self, key: str, specific_fields: str | list[str] = "*all", json_result: bool = True
     ) -> None | Issue | dict[str, Any]:
+        check_issue_ref(key)
         try:
             jira_issue = self.jira_client.issue(id=key, fields=specific_fields)
             if json_result:
@@ -220,6 +223,22 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             return None
         return allowed
 
+    def get_create_fields(self, project_key: str, issue_type: str) -> list[CreateField]:
+        """Fields for creating an issue: required first, each with its allowed values as readable labels."""
+        result = [
+            CreateField(
+                id=field_id,
+                name=meta.get("name", field_id),
+                required=bool(meta.get("required")),
+                type=(meta.get("schema") or {}).get("type"),
+                allowed_values=(
+                    [allowed_value_label(v) for v in allowed] if (allowed := meta.get("allowedValues")) else None
+                ),
+            )
+            for field_id, meta in self.get_project_fields_metadata(project_key, issue_type).items()
+        ]
+        return sorted(result, key=lambda f: (not f["required"], f["name"]))
+
     @staticmethod
     def _is_value_allowed(value: Any, allowed_values: list[Any]) -> bool:
         allowed = {av.get(key) for av in allowed_values for key in ALLOWED_VALUE_KEYS}
@@ -300,6 +319,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         Raises:
             ValueError: If a field is not editable or a value is invalid (always raised).
         """
+        check_issue_ref(issue_key)
         try:
             issue = self.jira_client.issue(issue_key)
             edit_fields = self.jira_client.editmeta(issue_key)["fields"]
@@ -314,6 +334,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             return None
 
     def delete_issue(self, issue_key: str) -> bool:
+        check_issue_ref(issue_key)
         try:
             issue = self.jira_client.issue(issue_key)
             issue.delete()
@@ -324,6 +345,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             return False
 
     def add_comment(self, issue: str, comment: str) -> None:
+        check_issue_ref(issue)
         self.jira_client.add_comment(issue=issue, body=comment)
         self.logger.debug(f"Comment added to issue {issue} successfully.")
 
@@ -338,6 +360,8 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         return {link_type["name"] for link_type in self.get_link_types()}
 
     def create_link(self, issue_key: str, link_type: str, in_issue_key: str) -> bool:
+        check_issue_ref(issue_key)
+        check_issue_ref(in_issue_key)
         try:
             available_link_types = self._get_available_link_types()
         except Exception as err:
@@ -358,6 +382,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             return False
 
     def upload_attachment(self, issue_key: str, file_path: str) -> bool:
+        check_issue_ref(issue_key)
         try:
             self.jira_client.add_attachment(issue=issue_key, attachment=file_path)
             return True
@@ -371,6 +396,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
 
     def get_transitions(self, issue_key: str) -> list[dict[str, str]]:
         """Return the transitions currently available for an issue as `{id, name}` dicts."""
+        check_issue_ref(issue_key)
         return [{"id": t["id"], "name": t["name"]} for t in self._fetch_transitions(issue_key)]
 
     def _resolve_transition(self, issue_key: str, transition_name: str) -> dict:
@@ -394,6 +420,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         Jira silently drops a transition comment when the transition screen has no comment field,
         so in that case the comment is added separately after the transition succeeds.
         """
+        check_issue_ref(issue_key)
         needs_separate_comment = False
         try:
             transition = self._resolve_transition(issue_key, transition_name)

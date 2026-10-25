@@ -19,3 +19,4 @@ FIELD_TYPE_CHECKS = {
     "object": FieldTypeCheck(dict, "an object"),
     "issuetype": FieldTypeCheck(dict, "an issue type"),
 }
+ISSUE_REF_PATTERN = re.compile(r"[A-Za-z0-9_]+(-[0-9]+)?")
