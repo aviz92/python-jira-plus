@@ -57,10 +57,15 @@ def _eventually(check: Callable[[], Any], timeout: float = 30.0) -> Any:
             time.sleep(1)
 
 
-@pytest.fixture(scope="module")
-def jira() -> JiraCloud:
+@pytest.fixture(scope="module", autouse=True)
+def _require_jira_env() -> None:
+    """Skip the whole module when credentials or the sandbox project are not configured (e.g. in CI)."""
     if missing := [var for var in _REQUIRED_ENV if not os.getenv(var)]:
         pytest.skip(f"Missing required env vars: {', '.join(missing)}")
+
+
+@pytest.fixture(scope="module")
+def jira() -> JiraCloud:
     return JiraCloud()
 
 
