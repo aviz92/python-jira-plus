@@ -327,8 +327,15 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         self.jira_client.add_comment(issue=issue, body=comment)
         self.logger.debug(f"Comment added to issue {issue} successfully.")
 
+    def get_link_types(self) -> list[dict[str, str]]:
+        """Return the instance's issue link types as `{name, inward, outward}` dicts."""
+        return [
+            {"name": link_type.name, "inward": link_type.inward, "outward": link_type.outward}
+            for link_type in self.jira_client.issue_link_types()
+        ]
+
     def _get_available_link_types(self) -> set[str]:
-        return {link_type.name for link_type in self.jira_client.issue_link_types()}
+        return {link_type["name"] for link_type in self.get_link_types()}
 
     def create_link(self, issue_key: str, link_type: str, in_issue_key: str) -> bool:
         try:
@@ -358,8 +365,16 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             self._handle_error(f"Attachment {file_path} was not uploaded to issue {issue_key}", err)
             return False
 
+    def _fetch_transitions(self, issue_key: str) -> list[dict]:
+        """Single place that fetches transitions; `fields` is expanded so callers can inspect the screen."""
+        return self.jira_client.transitions(issue_key, expand="transitions.fields")
+
+    def get_transitions(self, issue_key: str) -> list[dict[str, str]]:
+        """Return the transitions currently available for an issue as `{id, name}` dicts."""
+        return [{"id": t["id"], "name": t["name"]} for t in self._fetch_transitions(issue_key)]
+
     def _resolve_transition(self, issue_key: str, transition_name: str) -> dict:
-        transitions = self.jira_client.transitions(issue_key, expand="transitions.fields")
+        transitions = self._fetch_transitions(issue_key)
         if transition := next((t for t in transitions if t["name"].lower() == transition_name.lower()), None):
             return transition
         raise ValueError(

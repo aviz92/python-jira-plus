@@ -296,3 +296,39 @@ class TestValidateFieldsMetadataReuse:
         jira_plus_cloud.validate_fields("PROJ", "Task", {"summary": "ok"}, fields_metadata=metadata)
 
         jira_plus_cloud.jira_client.createmeta.assert_not_called()
+
+
+class TestPublicLookups:
+    def test_get_transitions_returns_id_and_name_only(self, jira_plus_cloud: JiraCloud) -> None:
+        jira_plus_cloud.jira_client.transitions.return_value = [
+            {"id": "11", "name": "To Do", "fields": {"comment": {}}},
+            {"id": "31", "name": "Done", "fields": {}},
+        ]
+
+        assert jira_plus_cloud.get_transitions("PROJ-1") == [
+            {"id": "11", "name": "To Do"},
+            {"id": "31", "name": "Done"},
+        ]
+        jira_plus_cloud.jira_client.transitions.assert_called_once_with("PROJ-1", expand="transitions.fields")
+
+    def test_get_transitions_no_transitions_returns_empty_list(self, jira_plus_cloud: JiraCloud) -> None:
+        jira_plus_cloud.jira_client.transitions.return_value = []
+
+        assert jira_plus_cloud.get_transitions("PROJ-1") == []
+
+    def test_get_link_types_returns_name_inward_outward(self, jira_plus_cloud: JiraCloud) -> None:
+        jira_plus_cloud.jira_client.issue_link_types.return_value = [
+            _named("Blocks", inward="is blocked by", outward="blocks"),
+        ]
+
+        assert jira_plus_cloud.get_link_types() == [
+            {"name": "Blocks", "inward": "is blocked by", "outward": "blocks"},
+        ]
+
+    def test_create_link_uses_get_link_types_for_lookup(self, jira_plus_cloud: JiraCloud) -> None:
+        jira_plus_cloud.jira_client.issue_link_types.return_value = [
+            _named("Relates", inward="relates to", outward="relates to"),
+        ]
+
+        assert jira_plus_cloud.create_link("A-1", "RELATES", "B-2") is True
+        assert jira_plus_cloud.jira_client.create_issue_link.call_args.kwargs["type"] == "Relates"
