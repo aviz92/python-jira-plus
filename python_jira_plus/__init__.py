@@ -5,14 +5,10 @@ An enhanced Python client for JIRA with better error handling,
 pagination, metadata validation, and more.
 """
 
-from dotenv import load_dotenv
-
 from python_jira_plus.describe_allowed_value import describe_allowed_value
 from python_jira_plus.jira_base import JiraBase, UrlScheme
 from python_jira_plus.jira_cloud import JiraCloud
 from python_jira_plus.jira_on_premise import JiraOnPremise
-
-load_dotenv()
 
 BASIC_FIELDS = [
     "created",
@@ -29,4 +25,4 @@ BASIC_FIELDS = [
     "resolution",
     "parent",
 ]
-__all__ = ["JiraBase", "JiraCloud", "JiraOnPremise", "UrlScheme", "BASIC_FIELDS"]
+__all__ = ["JiraBase", "JiraCloud", "JiraOnPremise", "UrlScheme", "BASIC_FIELDS", "describe_allowed_value"]

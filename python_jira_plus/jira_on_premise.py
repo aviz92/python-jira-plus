@@ -1,7 +1,7 @@
 # jira_on_premise.py
 
 import logging
-import time
+from functools import partial
 
 from jira import JIRA, Issue, JIRAError
 from jira.client import ResultList
@@ -20,6 +20,7 @@ class JiraOnPremise(JiraBase):
         verify_ssl: bool = True,
         sso: bool = False,
         url_scheme: UrlScheme = UrlScheme.HTTPS,
+        raise_on_error: bool = False,
     ) -> None:
         self.sso = sso  # must be set before super().__init__ — create_connection reads it
         super().__init__(
@@ -29,6 +30,7 @@ class JiraOnPremise(JiraBase):
             jira_token=jira_token,
             verify_ssl=verify_ssl,
             url_scheme=url_scheme,
+            raise_on_error=raise_on_error,
         )
         use_legacy = Version(".".join(str(x) for x in self.server_version)) < Version("9.0.0")
         self.logger.debug(
@@ -36,6 +38,9 @@ class JiraOnPremise(JiraBase):
             f"(ON_PREMISE {self.server_version})"
         )
         self.use_createmeta = use_legacy
+
+    def _requires_username(self) -> bool:
+        return self.sso  # token auth needs no username
 
     def create_connection(self, timeout: int = 580) -> JIRA:
         auth = (
@@ -56,41 +61,27 @@ class JiraOnPremise(JiraBase):
         query: str,
         max_results: int,
         specific_fields: str | list[str],
-        jira_err_limit: int,
         json_result: bool,
+        limit: int | None = None,
     ) -> ResultList[Issue] | list:
+        cap = max_results if limit is None else limit  # without `limit`, max_results is also the total cap
         start_at = 0
-        all_issues = []
-        retries = 0
-        while True:  # pylint: disable=while-used
-            try:
-                self.logger.debug(f"Fetching issues from startAt={start_at}")
-                page = self.jira_client.search_issues(
-                    jql_str=query,
-                    startAt=start_at,
-                    maxResults=max_results,
-                    fields=specific_fields,
-                    json_result=json_result,
-                )
-                if not page:
-                    break
-
-                all_issues += page["issues"] if json_result else page
-                if json_result:
-                    start_at += page["maxResults"]
-                else:
-                    start_at += page.maxResults
-                if start_at >= max_results:
-                    break
-                retries = 0
-            except JIRAError as err:
-                if err.status_code == 400:
-                    self.logger.error(f"Bad Request: {err.text}")
-                    raise JIRAError(f"Bad Request: {err.text}") from err
-                retries += 1
-                self.logger.warning(f"Retry {retries}/{jira_err_limit} after JIRAError: {err}")
-                if retries >= jira_err_limit:
-                    self.logger.exception("Max retries exceeded.")
-                    return []
-                time.sleep(300 if retries == jira_err_limit - 1 else 90)
-        return all_issues
+        all_issues: list = []
+        while start_at < cap:  # pylint: disable=while-used
+            self.logger.debug(f"Fetching issues from startAt={start_at}")
+            fetch = partial(
+                self.jira_client.search_issues,
+                jql_str=query,
+                startAt=start_at,
+                maxResults=min(max_results, cap - start_at),
+                fields=specific_fields,
+                json_result=json_result,
+            )
+            page = fetch()
+            if not (issues := (page.get("issues") if json_result else list(page)) if page else None):
+                break
+            all_issues += issues
+            start_at += len(issues)
+            if start_at >= (page["total"] if json_result else page.total):
+                break
+        return all_issues[:cap]

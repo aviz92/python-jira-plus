@@ -13,6 +13,8 @@ select = [
     "UP",       # pyupgrade
     "ANN",      # flake8-annotations
     "T20",      # flake8-print
+    "C9",       # mccabe (complexity)
+    "N",        # pep8-naming
 ]
 
 ignore = [
@@ -21,8 +23,17 @@ ignore = [
     "T201",     # print-found
     "B008",     # do-not-perform-function-calls-in-argument-defaults
     "B006",     # do-not-use-mutable-defaults
+    "PLR2004",  # Magic value used in comparison
+
+    # Test Only:
+    "B011",     # Do not `assert False`
+
 ]
 
 [lint.per-file-ignores]
-"__init__.py" = ["F401"]
-"tests/**/*.py" = ["ANN", "S101"]
+"_init_.py" = ["F401"]
+"tests/*/.py" = ["ANN", "S101", "PLR2004", "N818"]
+"tests/*" = ["F401", "F811"]
+
+[lint.isort]
+combine-as-imports = true

@@ -14,7 +14,7 @@ An enhanced Python client for JIRA that extends the functionality of the officia
 
 ## Features
 - ✅ Simplified connection to JIRA Cloud and On-Premise instances
-- ✅ Robust error handling with automatic retries
+- ✅ Clear error handling: failures raise (`raise_on_error=True`) or are logged and returned as `None`/`False`. Rate limits (429) and 503 are retried by `jira-python` itself
 - ✅ Built-in pagination for large result sets
 - ✅ Field validation against JIRA metadata
 - ✅ Enhanced issue creation, retrieval, and updating
@@ -32,7 +32,6 @@ pip install python-jira-plus
 ## Requirements
 - Python 3.12+
 - `jira` package
-- `retrying` package
 - `custom-python-logger` package
 
 ---
@@ -47,13 +46,26 @@ JIRA_TOKEN=your_jira_api_token
 JIRA_BASE_URL=your-instance.atlassian.net  # Only used if base_url is not provided to constructor
 ```
 
+## Error handling
+By default, write helpers (`delete_issue`, `create_link`, `transition_issue`, `upload_attachment`,
+`update_issue`) and `get_issue_by_key` log the error and return `False`/`None`. Pass
+`raise_on_error=True` to the constructor to get the original exception instead:
+
+```python
+jira_client = JiraCloud(raise_on_error=True)
+jira_client.get_issue_by_key("PROJ-404")  # raises JIRAError instead of returning None
+```
+
+Validation problems (`ValueError`) and failed searches (`JIRAError`) are always raised.
+Rate limits (429) and 503 are retried by `jira-python`'s own session, not by this package.
+
 ## Examples
 
 ### Creating an Issue with Custom Fields
 ```python
-from python_jira_plus.jira_plus import JiraPlus
+from python_jira_plus import JiraCloud  # or JiraOnPremise
 
-jira_client = JiraPlus()
+jira_client = JiraCloud()
 issue = jira_client.create_issue(
     project_key="PROJ",
     summary="Implement new feature",
@@ -68,12 +80,13 @@ issue = jira_client.create_issue(
 
 ### Searching for Issues
 ```python
-from python_jira_plus.jira_plus import JiraPlus
+from python_jira_plus import JiraCloud
 
-jira_client = JiraPlus()
+jira_client = JiraCloud()
 issues = jira_client.get_objects_by_query(
     query="project = PROJ AND status = 'In Progress' ORDER BY created DESC",
-    max_results=50,
+    max_results=50,  # page size
+    limit=200,  # optional cap on the total number of issues returned
     specific_fields=["summary", "status", "assignee"],
     json_result=False
 )
@@ -84,9 +97,9 @@ for issue in issues:
 
 ### Updating an Issue
 ```python
-from python_jira_plus.jira_plus import JiraPlus
+from python_jira_plus import JiraCloud
 
-jira_client = JiraPlus()
+jira_client = JiraCloud()
 issue = jira_client.get_issue_by_key(key="PROJ-123", json_result=False)
 
 fields_to_update = {

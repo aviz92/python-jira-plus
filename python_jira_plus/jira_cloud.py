@@ -1,35 +1,17 @@
 # jira_cloud.py
 
-import logging
-import time
+from functools import partial
+from typing import Any
 
 import requests
 from jira import JIRA, Issue, JIRAError
 from jira.client import ResultList
 
-from python_jira_plus.jira_base import JiraBase, UrlScheme
+from python_jira_plus.jira_base import JiraBase
 
 
 class JiraCloud(JiraBase):
     use_createmeta = True
-
-    def __init__(
-        self,
-        base_url: str | None = None,
-        urllib3_log_level: int = logging.WARNING,
-        jira_username: str | None = None,
-        jira_token: str | None = None,
-        verify_ssl: bool = True,
-        url_scheme: UrlScheme = UrlScheme.HTTPS,
-    ) -> None:
-        super().__init__(
-            base_url=base_url,
-            urllib3_log_level=urllib3_log_level,
-            jira_username=jira_username,
-            jira_token=jira_token,
-            verify_ssl=verify_ssl,
-            url_scheme=url_scheme,
-        )
 
     def create_connection(self, timeout: int = 580) -> JIRA:
         jira_client = JIRA(
@@ -46,64 +28,60 @@ class JiraCloud(JiraBase):
     def _format_assignee(self, assignee: str) -> dict:
         return {"accountId": assignee}
 
+    @staticmethod
+    def _split_page(page: Any, json_result: bool) -> tuple[list, bool, str | None]:
+        """Return (issues, is_last, next_page_token) from a search page; an empty page counts as the last."""
+        if not page:
+            return [], True, None
+        if json_result:
+            return page.get("issues", []), page["isLast"], page.get("nextPageToken")
+        return list(page), page.isLast, page.nextPageToken
+
     def _paginate(
         self,
         query: str,
         max_results: int,
         specific_fields: str | list[str],
-        jira_err_limit: int,
         json_result: bool,
+        limit: int | None = None,
     ) -> ResultList[Issue] | list:
-        all_issues = []
-        retries = 0
-        page = None
-        while True:  # pylint: disable=while-used
-            try:
-                next_token = None
-                if page is not None:
-                    next_token = page.get("nextPageToken") if json_result else page.nextPageToken
-
-                self.logger.debug(f"Fetching issues from startAt={len(all_issues)}")
-                page = self.jira_client.enhanced_search_issues(
-                    jql_str=query,
-                    nextPageToken=next_token,
-                    maxResults=max_results,
-                    fields=specific_fields,
-                    json_result=json_result,
-                )
-                if not page:
-                    break
-
-                all_issues += page["issues"] if json_result else page
-                if page["isLast"] if json_result else page.isLast:
-                    break
-                retries = 0
-            except JIRAError as err:
-                if err.status_code == 400:
-                    self.logger.error(f"Bad Request: {err.text}")
-                    raise JIRAError(f"Bad Request: {err.text}") from err
-                retries += 1
-                self.logger.warning(f"Retry {retries}/{jira_err_limit} after JIRAError: {err}")
-                if retries >= jira_err_limit:
-                    self.logger.exception("Max retries exceeded.")
-                    return []
-                time.sleep(300 if retries == jira_err_limit - 1 else 90)
-        return all_issues
+        all_issues: list = []
+        next_token = None
+        while limit is None or len(all_issues) < limit:  # pylint: disable=while-used
+            self.logger.debug(f"Fetching issues from startAt={len(all_issues)}")
+            page_size = max_results if limit is None else min(max_results, limit - len(all_issues))
+            fetch = partial(
+                self.jira_client.enhanced_search_issues,
+                jql_str=query,
+                nextPageToken=next_token,
+                maxResults=page_size,
+                fields=specific_fields,
+                json_result=json_result,
+            )
+            issues, is_last, next_token = self._split_page(fetch(), json_result)
+            all_issues += issues
+            if is_last or not issues:
+                break
+        return all_issues if limit is None else all_issues[:limit]
 
     def get_account_data(self, user_mail: str) -> list[dict]:
         response = requests.get(
             f"{self.server}/rest/api/3/user/search",
             params={"query": user_mail},
             auth=(self.jira_username, self.jira_token),
+            verify=self.verify_ssl,
             timeout=30,
         )
         response.raise_for_status()
         return response.json()
 
+    def _first_account(self, query: str) -> dict:
+        if not (data := self.get_account_data(user_mail=query)):
+            raise ValueError(f"No Jira user found matching '{query}'")
+        return data[0]
+
     def get_account_id(self, user_mail: str) -> str:
-        data = self.get_account_data(user_mail=user_mail)
-        return data[0]["accountId"]
+        return self._first_account(user_mail)["accountId"]
 
     def get_account_display_name(self, user_display_name: str) -> str:
-        data = self.get_account_data(user_mail=user_display_name)
-        return data[0]["displayName"]
+        return self._first_account(user_display_name)["displayName"]

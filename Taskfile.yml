@@ -1,0 +1,29 @@
+# https://taskfile.dev
+# Installation on mac: brew install go-task/tap/go-task
+
+version: "3"
+
+dotenv:
+  - .env
+
+includes:
+  infra: .venv/lib/python3.13/site-packages/python_base_toolkit/ci/task_files/includes.yml
+
+tasks:
+  print-vars:
+    desc: "Print all task variables - command: task print-vars --verbose"
+    cmds:
+      - |
+        echo {{.OS}}
+
+  install-deps:
+    desc: "Install all dependencies."
+    deps:
+      - infra:install:install-uv
+      - infra:deploy:clean
+    cmds:
+      - rm uv.lock || true
+      - sleep 5
+      - uv cache clean
+      - uv sync --group dev
+      - task: infra:deploy:clean
