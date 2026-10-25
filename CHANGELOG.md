@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.1.0
+
+### Added
+- `allowed_projects` constructor option: restricts every operation to the listed projects and raises
+  `ProjectNotAllowedError` otherwise, even with `raise_on_error=False`. Searches are scoped in JQL and
+  filtered on the results; issue operations check the issue's current project, so moved issues are covered.
+- `simplify_issue(issue, detail=False)`: flattens a raw issue into plain values.
+- `get_create_fields(project_key, issue_type)`: the fields for creating an issue, required first,
+  with allowed values as readable labels.
+- `IssueSummary`, `IssueDetail` and `CreateField` typed dicts.
+
+### Changed
+- Issue keys and ids are validated before use: anything other than a key (`PROJ-123`) or a numeric id
+  raises `ValueError`. jira-python puts the key into the request path unescaped.
+
 ## 4.0.0
 
 ### Breaking changes

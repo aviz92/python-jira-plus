@@ -59,6 +59,25 @@ jira_client.get_issue_by_key("PROJ-404")  # raises JIRAError instead of returnin
 Validation problems (`ValueError`) and failed searches (`JIRAError`) are always raised.
 Rate limits (429) and 503 are retried by `jira-python`'s own session, not by this package.
 
+## Restricting access to projects
+
+```python
+from python_jira_plus import JiraCloud, ProjectNotAllowedError, simplify_issue
+
+jira = JiraCloud(allowed_projects=["PROJ", "OPS"])
+
+issues = jira.get_objects_by_query("status = Open", limit=20)  # scoped to PROJ and OPS
+print([simplify_issue(issue) for issue in issues])
+
+try:
+    jira.add_comment("SECRET-1", "hi")
+except ProjectNotAllowedError as err:
+    print(err)
+```
+
+Every method checks the project first. Issue operations also check the issue's *current* project,
+which costs one extra request per call while `allowed_projects` is set.
+
 ## Examples
 
 ### Creating an Issue with Custom Fields

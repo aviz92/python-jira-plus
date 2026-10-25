@@ -1,6 +1,7 @@
 # jira_on_premise.py
 
 import logging
+from collections.abc import Iterable
 from functools import partial
 
 from jira import JIRA, Issue, JIRAError
@@ -21,6 +22,7 @@ class JiraOnPremise(JiraBase):
         sso: bool = False,
         url_scheme: UrlScheme = UrlScheme.HTTPS,
         raise_on_error: bool = False,
+        allowed_projects: Iterable[str] | None = None,
     ) -> None:
         self.sso = sso  # must be set before super().__init__ — create_connection reads it
         super().__init__(
@@ -31,6 +33,7 @@ class JiraOnPremise(JiraBase):
             verify_ssl=verify_ssl,
             url_scheme=url_scheme,
             raise_on_error=raise_on_error,
+            allowed_projects=allowed_projects,
         )
         use_legacy = Version(".".join(str(x) for x in self.server_version)) < Version("9.0.0")
         self.logger.debug(

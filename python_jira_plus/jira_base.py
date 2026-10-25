@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from abc import ABC, abstractmethod
+from collections.abc import Iterable
 from enum import Enum
 from typing import Any
 
@@ -19,6 +20,9 @@ from python_jira_plus.consts import (
     SCHEME_PATTERN,
 )
 from python_jira_plus.describe_allowed_value import describe_allowed_value
+from python_jira_plus.exceptions import ProjectNotAllowedError
+from python_jira_plus.helpers import allowed_value_label, check_issue_ref, scope_jql
+from python_jira_plus.types import CreateField
 
 
 class UrlScheme(Enum):
@@ -38,6 +42,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         verify_ssl: bool = True,
         url_scheme: UrlScheme = UrlScheme.HTTPS,
         raise_on_error: bool = False,
+        allowed_projects: Iterable[str] | None = None,
     ) -> None:
         self.logger = get_logger(LOGGER_NAME)
         get_logger("urllib3").setLevel(urllib3_log_level)
@@ -50,6 +55,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         self.server = f"{self.url_scheme}://{self.base_url}"
         self.verify_ssl = verify_ssl
         self.raise_on_error = raise_on_error
+        self.allowed_projects = frozenset(p.strip().upper() for p in allowed_projects or () if p.strip())
         self._validate_credentials()
 
         self.jira_client = self.create_connection()
@@ -75,6 +81,35 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             raise ValueError("Jira token is missing — pass `jira_token` or set JIRA_TOKEN")
         if self._requires_username() and not self.jira_username:
             raise ValueError("Jira username is missing — pass `jira_username` or set JIRA_USER_NAME")
+
+    def _check_project_allowed(self, project_key: str) -> None:
+        if self.allowed_projects and project_key.upper() not in self.allowed_projects:
+            raise ProjectNotAllowedError(
+                f"Project '{project_key}' is not allowed. Allowed projects: {sorted(self.allowed_projects)}"
+            )
+
+    def _check_issue_allowed(self, issue_ref: Any) -> None:
+        """Validate the key/id; with an allowlist, check the issue's *current* project (moved issues keep old keys)."""
+        check_issue_ref(issue_ref)
+        if not self.allowed_projects or not isinstance(issue_ref, str):
+            return
+        if "-" in issue_ref:
+            self._check_project_allowed(issue_ref.rsplit("-", 1)[0])  # cheap early reject, no request
+        self._check_project_allowed(self.jira_client.issue(id=issue_ref, fields="project").fields.project.key)
+
+    @staticmethod
+    def _with_project_field(fields: str | list[str]) -> str | list[str]:
+        if isinstance(fields, list):
+            return fields if "project" in fields else [*fields, "project"]
+        if fields.startswith("*") or "project" in fields.split(","):
+            return fields
+        return f"{fields},project"
+
+    @staticmethod
+    def _project_of(issue: Issue | dict[str, Any]) -> str:
+        if isinstance(issue, dict):
+            return (((issue.get("fields") or {}).get("project")) or {}).get("key", "").upper()
+        return issue.fields.project.key.upper()
 
     @abstractmethod
     def create_connection(self, timeout: int = 580) -> JIRA: ...
@@ -125,14 +160,19 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
     def get_issue_by_key(
         self, key: str, specific_fields: str | list[str] = "*all", json_result: bool = True
     ) -> None | Issue | dict[str, Any]:
+        check_issue_ref(key)
+        if self.allowed_projects:
+            if "-" in key:
+                self._check_project_allowed(key.rsplit("-", 1)[0])
+            specific_fields = self._with_project_field(specific_fields)
         try:
             jira_issue = self.jira_client.issue(id=key, fields=specific_fields)
-            if json_result:
-                return jira_issue.raw
-            return jira_issue
         except Exception as err:
             self._handle_error(f"Failed to get issue {key}", err)
             return None
+        if self.allowed_projects:
+            self._check_project_allowed(self._project_of(jira_issue))  # one request: checked on the result
+        return jira_issue.raw if json_result else jira_issue
 
     def get_objects_by_query(
         self,
@@ -154,13 +194,19 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         Raises:
             JIRAError: If Jira rejects the query or a request fails.
         """
-        return self._paginate(
+        if self.allowed_projects:
+            query = scope_jql(query, self.allowed_projects)
+            specific_fields = self._with_project_field(specific_fields)
+        issues = self._paginate(
             query=query,
             max_results=max_results,
             specific_fields=specific_fields,
             json_result=json_result,
             limit=limit,
         )
+        if self.allowed_projects:  # the JQL wrapper can be escaped with unbalanced parentheses
+            return [issue for issue in issues if self._project_of(issue) in self.allowed_projects]
+        return issues
 
     @staticmethod
     def _find_issue_meta(meta: dict, project_key: str, issue_type: str) -> tuple[dict | None, dict | None]:
@@ -194,6 +240,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         return {f.fieldId: f.raw for f in field_list}
 
     def get_project_fields_metadata(self, project_key: str, issue_type: str) -> dict:
+        self._check_project_allowed(project_key)
         if self.use_createmeta:
             return self._fetch_via_createmeta(project_key=project_key, issue_type=issue_type)
         return self._fetch_via_issue_types_api(project_key=project_key, issue_type=issue_type)
@@ -219,6 +266,22 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             self.logger.info(f"No allowed values found for field '{field_id_or_name}'")
             return None
         return allowed
+
+    def get_create_fields(self, project_key: str, issue_type: str) -> list[CreateField]:
+        """Fields for creating an issue: required first, each with its allowed values as readable labels."""
+        result = [
+            CreateField(
+                id=field_id,
+                name=meta.get("name", field_id),
+                required=bool(meta.get("required")),
+                type=(meta.get("schema") or {}).get("type"),
+                allowed_values=(
+                    [allowed_value_label(v) for v in allowed] if (allowed := meta.get("allowedValues")) else None
+                ),
+            )
+            for field_id, meta in self.get_project_fields_metadata(project_key, issue_type).items()
+        ]
+        return sorted(result, key=lambda f: (not f["required"], f["name"]))
 
     @staticmethod
     def _is_value_allowed(value: Any, allowed_values: list[Any]) -> bool:
@@ -249,6 +312,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         self, project_key: str, issue_type: str, fields: dict, fields_metadata: dict | None = None
     ) -> None:
         """Validate `fields`; pass `fields_metadata` to reuse an already-fetched result."""
+        self._check_project_allowed(project_key)
         if fields_metadata is None:
             fields_metadata = self.get_project_fields_metadata(project_key=project_key, issue_type=issue_type)
         self._validate_against_metadata(
@@ -300,6 +364,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         Raises:
             ValueError: If a field is not editable or a value is invalid (always raised).
         """
+        self._check_issue_allowed(issue_key)
         try:
             issue = self.jira_client.issue(issue_key)
             edit_fields = self.jira_client.editmeta(issue_key)["fields"]
@@ -314,6 +379,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             return None
 
     def delete_issue(self, issue_key: str) -> bool:
+        self._check_issue_allowed(issue_key)
         try:
             issue = self.jira_client.issue(issue_key)
             issue.delete()
@@ -324,6 +390,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             return False
 
     def add_comment(self, issue: str, comment: str) -> None:
+        self._check_issue_allowed(issue)
         self.jira_client.add_comment(issue=issue, body=comment)
         self.logger.debug(f"Comment added to issue {issue} successfully.")
 
@@ -338,6 +405,8 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         return {link_type["name"] for link_type in self.get_link_types()}
 
     def create_link(self, issue_key: str, link_type: str, in_issue_key: str) -> bool:
+        self._check_issue_allowed(issue_key)
+        self._check_issue_allowed(in_issue_key)
         try:
             available_link_types = self._get_available_link_types()
         except Exception as err:
@@ -358,6 +427,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
             return False
 
     def upload_attachment(self, issue_key: str, file_path: str) -> bool:
+        self._check_issue_allowed(issue_key)
         try:
             self.jira_client.add_attachment(issue=issue_key, attachment=file_path)
             return True
@@ -371,6 +441,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
 
     def get_transitions(self, issue_key: str) -> list[dict[str, str]]:
         """Return the transitions currently available for an issue as `{id, name}` dicts."""
+        self._check_issue_allowed(issue_key)
         return [{"id": t["id"], "name": t["name"]} for t in self._fetch_transitions(issue_key)]
 
     def _resolve_transition(self, issue_key: str, transition_name: str) -> dict:
@@ -394,6 +465,7 @@ class JiraBase(ABC):  # pylint: disable=too-many-instance-attributes
         Jira silently drops a transition comment when the transition screen has no comment field,
         so in that case the comment is added separately after the transition succeeds.
         """
+        self._check_issue_allowed(issue_key)
         needs_separate_comment = False
         try:
             transition = self._resolve_transition(issue_key, transition_name)
