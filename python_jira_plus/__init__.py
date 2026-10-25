@@ -7,11 +7,10 @@ pagination, metadata validation, and more.
 
 from python_jira_plus.describe_allowed_value import describe_allowed_value
 from python_jira_plus.exceptions import ProjectNotAllowedError
-from python_jira_plus.helpers import simplify_issue
 from python_jira_plus.jira_base import JiraBase, UrlScheme
 from python_jira_plus.jira_cloud import JiraCloud
 from python_jira_plus.jira_on_premise import JiraOnPremise
-from python_jira_plus.types import CreateField, IssueDetail, IssueSummary
+from python_jira_plus.types import CreateField
 
 BASIC_FIELDS = [
     "created",
@@ -35,9 +34,6 @@ __all__ = [
     "UrlScheme",
     "BASIC_FIELDS",
     "describe_allowed_value",
-    "simplify_issue",
     "ProjectNotAllowedError",
-    "IssueSummary",
-    "IssueDetail",
     "CreateField",
 ]

@@ -62,12 +62,12 @@ Rate limits (429) and 503 are retried by `jira-python`'s own session, not by thi
 ## Restricting access to projects
 
 ```python
-from python_jira_plus import JiraCloud, ProjectNotAllowedError, simplify_issue
+from python_jira_plus import JiraCloud, ProjectNotAllowedError
 
 jira = JiraCloud(allowed_projects=["PROJ", "OPS"])
 
 issues = jira.get_objects_by_query("status = Open", limit=20)  # scoped to PROJ and OPS
-print([simplify_issue(issue) for issue in issues])
+print([issue["key"] for issue in issues])
 
 try:
     jira.add_comment("SECRET-1", "hi")

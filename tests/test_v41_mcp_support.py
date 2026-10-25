@@ -3,29 +3,10 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from python_jira_plus import ProjectNotAllowedError, simplify_issue
+from python_jira_plus import ProjectNotAllowedError
 from python_jira_plus.helpers import check_issue_ref, scope_jql
 from python_jira_plus.jira_cloud import JiraCloud
 from python_jira_plus.jira_on_premise import JiraOnPremise
-
-RAW_ISSUE = {
-    "key": "OK-1",
-    "fields": {
-        "summary": "Fix it",
-        "status": {"name": "Open"},
-        "issuetype": {"name": "Bug"},
-        "priority": {"name": "P1"},
-        "assignee": {"displayName": "Avi"},
-        "updated": "2026-10-25",
-        "project": {"key": "OK"},
-        "reporter": {"displayName": "Dana"},
-        "created": "2026-10-01",
-        "labels": ["a"],
-        "resolution": None,
-        "parent": {"key": "OK-0"},
-        "description": "text",
-    },
-}
 
 
 def _issue_in(project: str) -> MagicMock:
@@ -39,39 +20,6 @@ def _issue_in(project: str) -> MagicMock:
 def scoped(jira_plus_cloud: JiraCloud) -> JiraCloud:
     jira_plus_cloud.allowed_projects = frozenset({"OK"})
     return jira_plus_cloud
-
-
-class TestSimplifyIssue:
-    def test_summary(self) -> None:
-        assert simplify_issue(RAW_ISSUE) == {
-            "key": "OK-1",
-            "summary": "Fix it",
-            "status": "Open",
-            "issue_type": "Bug",
-            "priority": "P1",
-            "assignee": "Avi",
-            "updated": "2026-10-25",
-        }
-
-    def test_detail(self) -> None:
-        detail = simplify_issue(RAW_ISSUE, detail=True)
-        assert (detail["project"], detail["reporter"], detail["parent"], detail["labels"]) == (
-            "OK",
-            "Dana",
-            "OK-0",
-            ["a"],
-        )
-        assert detail["resolution"] is None
-
-    def test_missing_fields(self) -> None:
-        detail = simplify_issue({"key": "OK-2"}, detail=True)
-        assert detail["status"] is None and detail["labels"] == []
-
-    def test_accepts_issue_object(self) -> None:
-        issue = MagicMock()
-        issue.raw = RAW_ISSUE
-        with patch("python_jira_plus.helpers.Issue", MagicMock):
-            assert simplify_issue(issue)["key"] == "OK-1"
 
 
 class TestGetCreateFields:

@@ -6,10 +6,9 @@
 - `allowed_projects` constructor option: restricts every operation to the listed projects and raises
   `ProjectNotAllowedError` otherwise, even with `raise_on_error=False`. Searches are scoped in JQL and
   filtered on the results; issue operations check the issue's current project, so moved issues are covered.
-- `simplify_issue(issue, detail=False)`: flattens a raw issue into plain values.
 - `get_create_fields(project_key, issue_type)`: the fields for creating an issue, required first,
   with allowed values as readable labels.
-- `IssueSummary`, `IssueDetail` and `CreateField` typed dicts.
+- `CreateField` typed dict.
 
 ### Changed
 - Issue keys and ids are validated before use: anything other than a key (`PROJ-123`) or a numeric id

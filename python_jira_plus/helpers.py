@@ -1,41 +1,7 @@
 from collections.abc import Iterable
 from typing import Any
 
-from jira import Issue
-
 from python_jira_plus.consts import ISSUE_REF_PATTERN, ORDER_BY_PATTERN
-from python_jira_plus.types import IssueDetail, IssueSummary
-
-
-def _get(obj: Any, key: str = "name") -> Any:
-    return obj.get(key) if isinstance(obj, dict) else None
-
-
-def simplify_issue(issue: dict[str, Any] | Issue, detail: bool = False) -> IssueSummary | IssueDetail:
-    """Flatten a raw issue (or `Issue`) into plain values: names instead of nested objects."""
-    raw = issue.raw if isinstance(issue, Issue) else issue
-    fields = raw.get("fields") or {}
-    summary = IssueSummary(
-        key=raw["key"],
-        summary=fields.get("summary"),
-        status=_get(fields.get("status")),
-        issue_type=_get(fields.get("issuetype")),
-        priority=_get(fields.get("priority")),
-        assignee=_get(fields.get("assignee"), "displayName"),
-        updated=fields.get("updated"),
-    )
-    if not detail:
-        return summary
-    return IssueDetail(
-        **summary,
-        project=_get(fields.get("project"), "key"),
-        reporter=_get(fields.get("reporter"), "displayName"),
-        created=fields.get("created"),
-        labels=fields.get("labels") or [],
-        resolution=_get(fields.get("resolution")),
-        parent=_get(fields.get("parent"), "key"),
-        description=fields.get("description"),
-    )
 
 
 def allowed_value_label(value: Any) -> str:
