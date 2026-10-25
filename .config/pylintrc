@@ -2,8 +2,7 @@
 
 [FORMAT]
 max-line-length=120
-max-attributes=10
-max-args=10
+max-attributes=15
 
 [MESSAGES CONTROL]
 disable =
@@ -25,3 +24,6 @@ disable =
     R2004,      # magic-value-comparison
     W0717,      # too-many-try-statements
     C0199,      # docstring-first-line-empty
+    C2701,      # import-private-name ; Imported private module
+    R6301,      # Method could be a function (no-self-use)
+    C0321,      # More than one statement on a single line (multiple-statements)
