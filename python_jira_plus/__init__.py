@@ -6,7 +6,6 @@ pagination, metadata validation, and more.
 """
 
 from python_jira_plus.describe_allowed_value import describe_allowed_value
-from python_jira_plus.exceptions import ProjectNotAllowedError
 from python_jira_plus.jira_base import JiraBase, UrlScheme
 from python_jira_plus.jira_cloud import JiraCloud
 from python_jira_plus.jira_on_premise import JiraOnPremise
@@ -34,6 +33,5 @@ __all__ = [
     "UrlScheme",
     "BASIC_FIELDS",
     "describe_allowed_value",
-    "ProjectNotAllowedError",
     "CreateField",
 ]

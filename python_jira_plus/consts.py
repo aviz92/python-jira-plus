@@ -20,4 +20,3 @@ FIELD_TYPE_CHECKS = {
     "issuetype": FieldTypeCheck(dict, "an issue type"),
 }
 ISSUE_REF_PATTERN = re.compile(r"[A-Za-z0-9_]+(-[0-9]+)?")
-ORDER_BY_PATTERN = re.compile(r"\border\s+by\b", re.IGNORECASE)
